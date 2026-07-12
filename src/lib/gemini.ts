@@ -189,8 +189,18 @@ export async function generateEmailDraftForReclamo(input: {
   nombreConsumidor: string;
   estadoActual: string;
   resumen: string;
+  hecho?: string;
   empresas: string;
   plantilla: string;
+  intencion?: string;
+  ejemplosSimilares?: {
+    reclamoId: number;
+    resumen: string;
+    empresas: string;
+    estado: string;
+    subject: string;
+    body: string;
+  }[];
 }): Promise<{ subject: string; body: string }> {
   const system = `Sos redactor institucional de UCU (Usuarios y Consumidores Unidos), asociación de defensa del consumidor de Argentina.
 Redactás emails para consumidores que presentaron reclamos en el sistema "Usuarios Protegidos".
@@ -199,16 +209,36 @@ Reglas:
 - Tono institucional, empático, claro
 - Mencioná el número de reclamo y la empresa denunciada
 - No inventés información que no te den
+- Si el operador indica intención o palabras sueltas, transformalas en un mensaje completo y profesional
+- Si hay ejemplos de casos similares, usalos solo como referencia de tono y estructura; adaptá al caso actual
 - El email incluye al final la firma institucional de UCU
 - Respondé SOLO JSON con "subject" y "body" (texto plano con saltos de línea \\n)`;
+
+  const ejemplos =
+    input.ejemplosSimilares?.length ?
+      input.ejemplosSimilares
+        .map(
+          (ejemplo, index) =>
+            `Ejemplo ${index + 1} (reclamo #${ejemplo.reclamoId}, ${ejemplo.estado}, ${ejemplo.empresas}):
+Asunto: ${ejemplo.subject}
+Cuerpo:
+${ejemplo.body}`
+        )
+        .join('\n\n')
+    : 'Sin ejemplos de casos similares.';
 
   const prompt = `Generá un email para el consumidor según estos datos:
 - Número de reclamo: #${input.reclamoId}
 - Nombre del consumidor: ${input.nombreConsumidor}
 - Estado actual del caso: ${input.estadoActual}
 - Resumen del reclamo: ${input.resumen}
+- Hechos del reclamo: ${input.hecho?.trim() || '(no provistos)'}
 - Empresa(s) denunciada(s): ${input.empresas}
 - Tipo de comunicación solicitada: ${input.plantilla}
+- Intención del operador (palabras sueltas o idea a comunicar): ${input.intencion?.trim() || 'Redactar según la plantilla indicada'}
+
+Respuestas enviadas en casos similares (solo referencia, no copies datos personales ni números de otros reclamos):
+${ejemplos}
 
 Devolvé JSON: { "subject": "...", "body": "..." }`;
 

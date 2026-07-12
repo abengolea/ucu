@@ -34,7 +34,7 @@ export async function GET(
         return NextResponse.json(await getReclamoEstadosFromFirestore());
       case 'empresas': {
         const query = q.trim();
-        if (query.length < 2) {
+        if (!query) {
           return NextResponse.json([]);
         }
         return NextResponse.json(await searchReclamoEmpresasFromFirestore(query));

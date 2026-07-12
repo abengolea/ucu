@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { textMatchesQuery } from '@/lib/text-search';
 import type { ReclamoCausaCatalog } from '@/types/reclamos';
 
 export default function AdminReclamosCausasPage() {
@@ -33,10 +34,9 @@ export default function AdminReclamosCausasPage() {
     };
   }, []);
 
-  const filtered = causas.filter((causa) => {
-    const haystack = `${causa.id} ${causa.descripcion}`.toLowerCase();
-    return haystack.includes(query.toLowerCase());
-  });
+  const filtered = causas.filter((causa) =>
+    textMatchesQuery(`${causa.id} ${causa.descripcion}`, query)
+  );
 
   const activas = filtered.filter((causa) => causa.activo).length;
 

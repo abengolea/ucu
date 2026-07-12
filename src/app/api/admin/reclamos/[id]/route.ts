@@ -13,6 +13,10 @@ import {
 } from '@/lib/reclamos-store';
 import { computeAdminBandeja } from '@/lib/reclamos-admin';
 import {
+  buildReclamoReplyToAddress,
+  isReclamosInboundConfigured,
+} from '@/lib/reclamos-email-thread';
+import {
   canWriteReclamo,
   reclamoWriteForbiddenResponse,
   requireReclamoWriteAccess,
@@ -55,6 +59,10 @@ export async function GET(
       grupos,
       canWrite,
       delegados,
+      emailThread: {
+        inboundConfigured: isReclamosInboundConfigured(),
+        replyTo: buildReclamoReplyToAddress(reclamoId),
+      },
     });
   } catch (error) {
     console.error(error);

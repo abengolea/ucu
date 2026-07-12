@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { buildReclamoDocumentFromForm, resolveEmpresaRefs, type ReclamoCatalogLookups } from '@/lib/reclamos-normalize';
 import { normalizeExternalUrl } from '@/lib/reclamos-display';
@@ -7,6 +8,7 @@ import type {
   ReclamoCiudad,
   ReclamoComunicacion,
   ReclamoDatosUpdate,
+  ReclamoDenunciante,
   ReclamoEmpresa,
   ReclamoEmpresaRef,
   ReclamoEnlacesExternos,
@@ -28,6 +30,10 @@ import {
   RECLAMO_ESTADO_CONSULTA,
 } from '@/lib/reclamos-admin';
 import { reclamoAssignedToIdentity } from '@/lib/admin-assignee-identity';
+import {
+  getReclamosInboundDomain,
+} from '@/lib/reclamos-email-thread';
+import { normalizeSearchText, scoreTextMatch } from '@/lib/text-search';
 
 const CATALOG_COLLECTIONS: Record<ReclamosCatalogType, string> = {
   estados: 'reclamos_estados',
@@ -42,6 +48,51 @@ function dbOrThrow() {
   const db = getAdminDb();
   if (!db) throw new Error('Firebase Admin no configurado.');
   return db;
+}
+
+function isFirestoreFieldValue(value: unknown): boolean {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      '_methodName' in value &&
+      typeof (value as { _methodName?: unknown })._methodName === 'string'
+  );
+}
+
+function omitUndefinedDeep<T>(value: T): T {
+  if (value === undefined) return value;
+  if (value === null || typeof value !== 'object') return value;
+  if (isFirestoreFieldValue(value)) return value;
+  if (Array.isArray(value)) {
+    return value.map((item) => omitUndefinedDeep(item)) as T;
+  }
+
+  const output: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (child !== undefined) {
+      output[key] = omitUndefinedDeep(child);
+    }
+  }
+  return output as T;
+}
+
+function setOptionalTopLevelField(
+  patch: Record<string, unknown>,
+  key: string,
+  value: string | null | undefined
+) {
+  const trimmed = (value ?? '').trim();
+  patch[key] = trimmed ? trimmed : FieldValue.delete();
+}
+
+function setOptionalNestedTextField(
+  target: ReclamoDenunciante,
+  key: 'calle' | 'numero' | 'piso' | 'depto',
+  value: string | undefined
+) {
+  const trimmed = value?.trim();
+  if (trimmed) target[key] = trimmed;
+  else delete target[key];
 }
 
 export async function hasReclamosCatalogsInFirestore(): Promise<boolean> {
@@ -95,7 +146,7 @@ export async function searchReclamoEmpresasFromFirestore(
   query: string,
   limit = 30
 ): Promise<ReclamoEmpresa[]> {
-  const normalized = query.trim().toLowerCase();
+  const normalized = normalizeSearchText(query);
   const db = dbOrThrow();
 
   if (!normalized) {
@@ -107,32 +158,21 @@ export async function searchReclamoEmpresasFromFirestore(
     return snap.docs.map((doc) => doc.data() as ReclamoEmpresa);
   }
 
-  const byName = await db
-    .collection(CATALOG_COLLECTIONS.empresas)
-    .orderBy('nombreSearch')
-    .startAt(normalized)
-    .endAt(`${normalized}\uf8ff`)
-    .limit(limit)
-    .get();
+  const snap = await db.collection(CATALOG_COLLECTIONS.empresas).get();
 
-  let results = byName.docs.map((doc) => doc.data() as ReclamoEmpresa);
-
-  if (results.length < limit && /^\d/.test(normalized)) {
-    const byCuit = await db
-      .collection(CATALOG_COLLECTIONS.empresas)
-      .orderBy('cuit')
-      .startAt(normalized)
-      .endAt(`${normalized}\uf8ff`)
-      .limit(limit - results.length)
-      .get();
-    const seen = new Set(results.map((item) => item.id));
-    for (const doc of byCuit.docs) {
-      const item = doc.data() as ReclamoEmpresa;
-      if (!seen.has(item.id)) results.push(item);
-    }
-  }
-
-  return results.slice(0, limit);
+  return snap.docs
+    .map((doc) => doc.data() as ReclamoEmpresa)
+    .map((empresa) => ({
+      empresa,
+      score: scoreTextMatch(`${empresa.nombre} ${empresa.cuit ?? ''}`, normalized),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score || a.empresa.nombre.localeCompare(b.empresa.nombre, 'es')
+    )
+    .slice(0, limit)
+    .map((entry) => entry.empresa);
 }
 
 export async function getReclamoEmpresasByIds(ids: number[]): Promise<ReclamoEmpresa[]> {
@@ -175,7 +215,32 @@ export async function reserveNextReclamoId(): Promise<number> {
 }
 
 export async function saveReclamoDocument(doc: StoredReclamoDocument): Promise<void> {
-  await dbOrThrow().collection('reclamos').doc(String(doc.id)).set(doc, { merge: true });
+  await dbOrThrow()
+    .collection('reclamos')
+    .doc(String(doc.id))
+    .set(omitUndefinedDeep(doc), { merge: true });
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  return undefined;
+}
+
+export function normalizeStoredReclamo(data: StoredReclamoDocument): StoredReclamoDocument {
+  return {
+    ...data,
+    otrasEmpresas: normalizeOptionalString(data.otrasEmpresas),
+    empresas: Array.isArray(data.empresas)
+      ? data.empresas.map((empresa) => ({
+          id: Number(empresa.id) || 0,
+          nombre: typeof empresa.nombre === 'string' ? empresa.nombre : String(empresa.nombre ?? ''),
+          cuit: normalizeOptionalString(empresa.cuit) ?? null,
+        }))
+      : [],
+  };
 }
 
 export async function getReclamoByIdFromFirestore(id: number): Promise<StoredReclamoDocument | null> {
@@ -183,7 +248,7 @@ export async function getReclamoByIdFromFirestore(id: number): Promise<StoredRec
   if (!snap.exists) return null;
   const data = snap.data() as StoredReclamoDocument;
   if (data.deletedAt) return null;
-  return data;
+  return normalizeStoredReclamo(data);
 }
 
 export async function findReclamoByIdAndDocumento(
@@ -436,6 +501,7 @@ export async function addReclamoComunicacion(
   const current = snap.data() as StoredReclamoDocument;
   const comunicaciones = current.comunicaciones ?? [];
   comunicaciones.unshift({
+    direction: 'outbound',
     ...comunicacion,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   });
@@ -444,6 +510,58 @@ export async function addReclamoComunicacion(
     { comunicaciones, updatedAt: new Date().toISOString() },
     { merge: true }
   );
+}
+
+export async function addReclamoComunicacionEntrante(
+  id: number,
+  comunicacion: {
+    from: string;
+    subject: string;
+    body: string;
+    sentAt?: string;
+    sentByName?: string;
+  }
+): Promise<void> {
+  const db = dbOrThrow();
+  const ref = db.collection('reclamos').doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Reclamo no encontrado');
+
+  const current = normalizeStoredReclamo(snap.data() as StoredReclamoDocument);
+  const comunicaciones = current.comunicaciones ?? [];
+  const from = comunicacion.from.trim().toLowerCase();
+
+  comunicaciones.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    direction: 'inbound',
+    from,
+    to: getReclamosInboundDomain() ? `reclamo+${id}@${getReclamosInboundDomain()}` : 'reclamos@ucu',
+    subject: comunicacion.subject.trim(),
+    body: comunicacion.body.trim(),
+    sentAt: comunicacion.sentAt ?? new Date().toISOString(),
+    sentByEmail: from,
+    sentByName: comunicacion.sentByName?.trim() || 'Consumidor',
+  });
+
+  await ref.set(
+    { comunicaciones, updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+}
+
+export async function findReclamoIdsByDenuncianteEmail(email: string, limit = 5): Promise<number[]> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return [];
+
+  const snap = await dbOrThrow()
+    .collection('reclamos')
+    .where('denunciante.email', '==', normalized)
+    .limit(limit)
+    .get();
+
+  return snap.docs
+    .map((doc) => (doc.data() as StoredReclamoDocument).id)
+    .filter((id) => Number.isFinite(id));
 }
 
 export async function createReclamoFromPublicForm(
@@ -563,12 +681,12 @@ export async function updateReclamoDatos(
   if (!snap.exists) throw new Error('Reclamo no encontrado');
 
   const current = snap.data() as StoredReclamoDocument;
-  const patch: Partial<StoredReclamoDocument> = {
+  const patch: Record<string, unknown> = {
     updatedAt: new Date().toISOString(),
   };
 
   if (update.denunciante && Object.keys(update.denunciante).length > 0) {
-    const merged = { ...current.denunciante, ...update.denunciante };
+    const merged: ReclamoDenunciante = { ...current.denunciante, ...update.denunciante };
     const provinciaId = merged.provinciaId;
     const ciudadId = merged.ciudadId;
 
@@ -593,12 +711,20 @@ export async function updateReclamoDatos(
     }
     if (update.denunciante.telefono !== undefined) merged.telefono = update.denunciante.telefono.trim();
     if (update.denunciante.email !== undefined) merged.email = update.denunciante.email.trim().toLowerCase();
-    if (update.denunciante.calle !== undefined) merged.calle = update.denunciante.calle.trim() || undefined;
-    if (update.denunciante.numero !== undefined) merged.numero = update.denunciante.numero.trim() || undefined;
-    if (update.denunciante.piso !== undefined) merged.piso = update.denunciante.piso.trim() || undefined;
-    if (update.denunciante.depto !== undefined) merged.depto = update.denunciante.depto.trim() || undefined;
+    if (update.denunciante.calle !== undefined) {
+      setOptionalNestedTextField(merged, 'calle', update.denunciante.calle);
+    }
+    if (update.denunciante.numero !== undefined) {
+      setOptionalNestedTextField(merged, 'numero', update.denunciante.numero);
+    }
+    if (update.denunciante.piso !== undefined) {
+      setOptionalNestedTextField(merged, 'piso', update.denunciante.piso);
+    }
+    if (update.denunciante.depto !== undefined) {
+      setOptionalNestedTextField(merged, 'depto', update.denunciante.depto);
+    }
 
-    patch.denunciante = merged;
+    patch.denunciante = omitUndefinedDeep(merged);
     patch.nombreSearch = `${merged.nombre} ${merged.apellido}`.trim().toLowerCase();
     patch.documentoSearch = merged.numeroDocumento.replace(/\D/g, '');
   }
@@ -607,8 +733,7 @@ export async function updateReclamoDatos(
   if (update.hecho !== undefined) patch.hecho = update.hecho.trim();
 
   if (update.otrasEmpresas !== undefined) {
-    const trimmed = (update.otrasEmpresas ?? '').trim();
-    patch.otrasEmpresas = trimmed || undefined;
+    setOptionalTopLevelField(patch, 'otrasEmpresas', update.otrasEmpresas);
   }
 
   if (update.empresaIds !== undefined) {
@@ -628,10 +753,11 @@ export async function updateReclamoDatos(
   }
 
   if (update.enlacesExternos !== undefined) {
-    patch.enlacesExternos = mergeEnlacesExternos(current.enlacesExternos, update.enlacesExternos);
+    const enlacesExternos = mergeEnlacesExternos(current.enlacesExternos, update.enlacesExternos);
+    patch.enlacesExternos = enlacesExternos ?? FieldValue.delete();
   }
 
-  await ref.set(patch, { merge: true });
+  await ref.set(omitUndefinedDeep(patch), { merge: true });
   const fresh = await ref.get();
-  return fresh.data() as StoredReclamoDocument;
+  return normalizeStoredReclamo(fresh.data() as StoredReclamoDocument);
 }

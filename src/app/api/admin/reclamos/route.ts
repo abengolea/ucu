@@ -29,6 +29,7 @@ function mapReclamo(item: Awaited<ReturnType<typeof listAdminReclamos>>[number])
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     empresas: item.empresas,
+    otrasEmpresas: item.otrasEmpresas,
   };
 }
 

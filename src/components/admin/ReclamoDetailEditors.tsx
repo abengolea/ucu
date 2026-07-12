@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, Pencil, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { textMatchesQuery } from '@/lib/text-search';
+import { asDisplayText } from '@/lib/reclamos-display';
 import type {
   ReclamoDatosUpdate,
   ReclamoDelegado,
@@ -165,10 +167,10 @@ export function ReclamoResponsableCard({
   );
 
   const filteredDelegados = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return delegados;
     return delegados.filter(
-      (d) => d.name.toLowerCase().includes(q) || d.email.toLowerCase().includes(q)
+      (d) => textMatchesQuery(d.name, q) || textMatchesQuery(d.email, q)
     );
   }, [delegados, query]);
 
@@ -513,12 +515,17 @@ export function ReclamoHechosSection({ reclamo, canWrite, reclamoId, onUpdated }
 }
 
 export function ReclamoEmpresasSection({ reclamo, canWrite, reclamoId, onUpdated }: EditorProps & { reclamo: StoredReclamoDocument }) {
+  const otrasEmpresasInicial = asDisplayText(reclamo.otrasEmpresas);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [otrasEmpresas, setOtrasEmpresas] = useState(reclamo.otrasEmpresas ?? '');
+  const [otrasEmpresas, setOtrasEmpresas] = useState(otrasEmpresasInicial);
   const [selectedEmpresas, setSelectedEmpresas] = useState<EmpresaOption[]>(
-    reclamo.empresas.map((e) => ({ id: e.id, nombre: e.nombre, cuit: e.cuit }))
+    reclamo.empresas.map((e) => ({
+      id: e.id,
+      nombre: asDisplayText(e.nombre),
+      cuit: asDisplayText(e.cuit) || null,
+    }))
   );
   const [empresaQuery, setEmpresaQuery] = useState('');
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -526,15 +533,21 @@ export function ReclamoEmpresasSection({ reclamo, canWrite, reclamoId, onUpdated
 
   useEffect(() => {
     if (!editing) {
-      setOtrasEmpresas(reclamo.otrasEmpresas ?? '');
-      setSelectedEmpresas(reclamo.empresas.map((e) => ({ id: e.id, nombre: e.nombre, cuit: e.cuit })));
+      setOtrasEmpresas(asDisplayText(reclamo.otrasEmpresas));
+      setSelectedEmpresas(
+        reclamo.empresas.map((e) => ({
+          id: e.id,
+          nombre: asDisplayText(e.nombre),
+          cuit: asDisplayText(e.cuit) || null,
+        }))
+      );
     }
   }, [editing, reclamo.otrasEmpresas, reclamo.empresas]);
 
   useEffect(() => {
     if (!editing) return;
     const query = empresaQuery.trim();
-    if (query.length < 2) {
+    if (!query) {
       setEmpresas([]);
       return;
     }
@@ -613,7 +626,7 @@ export function ReclamoEmpresasSection({ reclamo, canWrite, reclamoId, onUpdated
             value={empresaQuery}
             onChange={setEmpresaQuery}
           />
-          {empresaQuery.trim().length >= 2 && (
+          {empresaQuery.trim().length > 0 && (
             <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200">
               {empresasLoading ? (
                 <p className="px-4 py-3 text-sm text-slate-500">Buscando…</p>
@@ -642,15 +655,20 @@ export function ReclamoEmpresasSection({ reclamo, canWrite, reclamoId, onUpdated
       ) : (
         <>
           <ul className="list-inside list-disc text-sm text-slate-700">
-            {reclamo.empresas.map((empresa) => (
-              <li key={empresa.id}>
-                {empresa.cuit ? `${empresa.cuit} — ` : ''}{empresa.nombre}
-              </li>
-            ))}
+            {reclamo.empresas.map((empresa) => {
+              const nombre = asDisplayText(empresa.nombre);
+              const cuit = asDisplayText(empresa.cuit);
+              return (
+                <li key={empresa.id}>
+                  {cuit ? `${cuit} — ` : ''}
+                  {nombre}
+                </li>
+              );
+            })}
           </ul>
-          {reclamo.otrasEmpresas ? (
+          {otrasEmpresasInicial ? (
             <p className="mt-3 text-sm text-slate-600">
-              <strong>Otras:</strong> {reclamo.otrasEmpresas}
+              <strong>Otras:</strong> {otrasEmpresasInicial}
             </p>
           ) : null}
         </>

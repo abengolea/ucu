@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAdminDb } from '@/lib/firebase-admin';
+import { normalizeSearchText, textMatchesQuery } from '@/lib/text-search';
 import type { StoredReclamoDocument } from '@/types/reclamos';
 import type {
   ReclamoSearchFilters,
@@ -19,14 +20,6 @@ function dbOrThrow() {
   return db;
 }
 
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export function buildSearchIndexDoc(reclamo: StoredReclamoDocument): ReclamoSearchIndexDoc {
   const empresaNombres = [
@@ -107,7 +100,7 @@ export async function getSearchIndexMeta(): Promise<{
 async function loadIndexDocs(filters: ReclamoSearchFilters): Promise<ReclamoSearchIndexDoc[]> {
   const db = dbOrThrow();
 
-  if (filters.empresaId) {
+  if (filters.empresaId && !filters.empresaQuery) {
     const snap = await db
       .collection(COLLECTION)
       .where('empresaIds', 'array-contains', filters.empresaId)
@@ -121,13 +114,11 @@ async function loadIndexDocs(filters: ReclamoSearchFilters): Promise<ReclamoSear
 
 function matchesKeywords(textoSearch: string, keywords: string[]): boolean {
   if (!keywords.length) return true;
-  return keywords.every((kw) => textoSearch.includes(normalizeSearchText(kw)));
+  return keywords.every((kw) => textMatchesQuery(textoSearch, kw));
 }
 
 function matchesEmpresaQuery(empresaSearch: string, query: string): boolean {
-  const normalized = normalizeSearchText(query);
-  if (!normalized) return true;
-  return empresaSearch.includes(normalized);
+  return textMatchesQuery(empresaSearch, query);
 }
 
 function matchesDateRange(createdAt: string, dateFrom?: string, dateTo?: string): boolean {
@@ -139,8 +130,8 @@ function matchesDateRange(createdAt: string, dateFrom?: string, dateTo?: string)
 
 function matchesCausaKeywords(causaTextos: string[], keywords?: string[]): boolean {
   if (!keywords?.length) return true;
-  const blob = normalizeSearchText(causaTextos.join(' '));
-  return keywords.some((kw) => blob.includes(normalizeSearchText(kw)));
+  const blob = causaTextos.join(' ');
+  return keywords.some((kw) => textMatchesQuery(blob, kw));
 }
 
 function computeStats(hits: ReclamoSearchHit[]): ReclamoSearchStats {
@@ -217,18 +208,22 @@ export async function resolveEmpresaIdByName(query: string): Promise<number | nu
   const normalized = normalizeSearchText(query);
   if (normalized.length < 2) return null;
 
-  const snap = await db
-    .collection('reclamos_empresas')
-    .orderBy('nombreSearch')
-    .startAt(normalized)
-    .endAt(`${normalized}\uf8ff`)
-    .limit(1)
-    .get();
+  const snap = await db.collection('reclamos_empresas').get();
+  let best: { id: number; score: number } | null = null;
 
-  const first = snap.docs[0]?.data() as { id?: number; nombreSearch?: string } | undefined;
-  if (!first?.id) return null;
-  if (first.nombreSearch && !first.nombreSearch.includes(normalized.slice(0, 3))) return null;
-  return first.id;
+  for (const doc of snap.docs) {
+    const data = doc.data() as { id?: number; nombre?: string; nombreSearch?: string; cuit?: string | null };
+    if (!data.id) continue;
+    const haystack = normalizeSearchText(`${data.nombre ?? ''} ${data.cuit ?? ''}`);
+    if (!haystack) continue;
+    if (haystack === normalized) return data.id;
+    if (textMatchesQuery(haystack, normalized)) {
+      const score = haystack.startsWith(normalized) ? 2 : 1;
+      if (!best || score > best.score) best = { id: data.id, score };
+    }
+  }
+
+  return best?.id ?? null;
 }
 
 export async function mergeParsedFilters(
@@ -247,12 +242,6 @@ export async function mergeParsedFilters(
   if (manual?.empresaId) {
     merged.empresaId = manual.empresaId;
     merged.empresaQuery = undefined;
-  } else if (merged.empresaQuery && !merged.empresaId) {
-    const id = await resolveEmpresaIdByName(merged.empresaQuery);
-    if (id) {
-      merged.empresaId = id;
-      merged.empresaQuery = undefined;
-    }
   }
 
   return merged;

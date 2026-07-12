@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAdminDb } from '@/lib/firebase-admin';
+import { textMatchesQuery } from '@/lib/text-search';
 import type { StoredFalloDocument } from '@/types/observatorio';
 import type {
   FalloSearchFilters,
@@ -165,7 +166,7 @@ export async function getFallosSearchIndexMeta(): Promise<{
 async function loadIndexDocs(filters: FalloSearchFilters): Promise<FalloSearchIndexDoc[]> {
   const db = dbOrThrow();
 
-  if (filters.empresaId) {
+  if (filters.empresaId && !filters.empresaQuery) {
     const snap = await db
       .collection(COLLECTION)
       .where('demandadoEmpresaIds', 'array-contains', filters.empresaId)
@@ -228,9 +229,7 @@ function matchesTopicSearch(doc: FalloSearchIndexDoc, filters: FalloSearchFilter
 }
 
 function matchesNameQuery(fieldSearch: string, query?: string): boolean {
-  const normalized = normalizeSearchText(query ?? '');
-  if (!normalized) return true;
-  return keywordVariants(normalized).some((variant) => fieldSearch.includes(variant));
+  return textMatchesQuery(fieldSearch, query ?? '');
 }
 
 function matchesDateRange(fechaSort: string, dateFrom?: string, dateTo?: string): boolean {
@@ -370,11 +369,6 @@ export async function mergeParsedFalloFilters(
   if (manual?.empresaId) {
     merged.empresaId = manual.empresaId;
     merged.empresaQuery = undefined;
-  } else if (merged.empresaQuery && !merged.empresaId) {
-    const id = await resolveEmpresaIdByName(merged.empresaQuery);
-    if (id) {
-      merged.empresaId = id;
-    }
   }
 
   return merged;

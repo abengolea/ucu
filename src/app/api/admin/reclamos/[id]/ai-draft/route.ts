@@ -4,6 +4,7 @@ import {
   reclamoWriteForbiddenResponse,
   requireReclamoWriteAccess,
 } from '@/lib/reclamos-access';
+import { findSimilarReclamoComunicaciones } from '@/lib/reclamos-similar';
 import { requireAdminPermission } from '@/lib/admin-session';
 
 export async function POST(
@@ -27,22 +28,42 @@ export async function POST(
 
   const body = await request.json();
   const plantilla = typeof body?.plantilla === 'string' ? body.plantilla : 'Actualización del caso';
+  const intencion = typeof body?.intencion === 'string' ? body.intencion.trim() : '';
+  const usarCasosSimilares = body?.usarCasosSimilares !== false;
 
   const d = reclamo.denunciante;
   const nombreConsumidor = `${d.nombre} ${d.apellido}`;
   const empresas = reclamo.empresas.map((e) => e.nombre).join(', ') || reclamo.otrasEmpresas || '(sin empresa)';
 
   try {
+    const similares = usarCasosSimilares
+      ? await findSimilarReclamoComunicaciones(reclamo, 3)
+      : [];
+
     const draft = await generateEmailDraftForReclamo({
       reclamoId,
       nombreConsumidor,
       estadoActual: reclamo.estadoDescripcion ?? 'Consulta',
       resumen: reclamo.resumen,
+      hecho: reclamo.hecho,
       empresas,
       plantilla,
+      intencion: intencion || undefined,
+      ejemplosSimilares: similares.map((item) => ({
+        reclamoId: item.reclamoId,
+        resumen: item.resumen,
+        empresas: item.empresas,
+        estado: item.estadoDescripcion,
+        subject: item.comunicacion.subject,
+        body: item.comunicacion.body,
+      })),
     });
 
-    return NextResponse.json({ ok: true, ...draft });
+    return NextResponse.json({
+      ok: true,
+      ...draft,
+      casosSimilaresUsados: similares.length,
+    });
   } catch (error) {
     console.error('[ai-draft]', error);
     return NextResponse.json(

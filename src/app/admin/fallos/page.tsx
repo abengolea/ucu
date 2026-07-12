@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
+import { textMatchesQuery } from '@/lib/text-search';
 import { useAdminUser } from '@/components/admin/AdminAuth';
 
 type AdminFallo = {
@@ -66,10 +67,9 @@ export default function AdminFallosPage() {
     }
   }
 
-  const filtered = fallos.filter((fallo) => {
-    const haystack = `${fallo.nroExpediente} ${fallo.actor ?? ''} ${fallo.resumen}`.toLowerCase();
-    return haystack.includes(query.toLowerCase());
-  });
+  const filtered = fallos.filter((fallo) =>
+    textMatchesQuery(`${fallo.nroExpediente} ${fallo.actor ?? ''} ${fallo.resumen}`, query)
+  );
 
   return (
     <div>

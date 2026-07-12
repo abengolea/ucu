@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { Loader2 } from 'lucide-react';
 import { RequirePermission, useDefaultAdminRoute } from '@/components/admin/AdminPermissionGuard';
 import { decodeHtmlEntities } from '@/lib/format';
+import { textMatchesQuery } from '@/lib/text-search';
 import { useRouter } from 'next/navigation';
 
 type AdminPost = {
@@ -37,7 +38,7 @@ export default function AdminHomePage() {
   }, []);
 
   const filtered = posts.filter((post) =>
-    decodeHtmlEntities(post.title).toLowerCase().includes(query.toLowerCase())
+    textMatchesQuery(decodeHtmlEntities(post.title), query)
   );
 
   return (

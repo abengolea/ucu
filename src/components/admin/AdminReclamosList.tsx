@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { textMatchesQuery } from '@/lib/text-search';
 import type { ReclamoAdminBandeja, ReclamoResponsable } from '@/types/reclamos';
 
 export type AdminReclamoListItem = {
@@ -15,6 +16,7 @@ export type AdminReclamoListItem = {
   adminBandeja?: ReclamoAdminBandeja;
   responsable?: ReclamoResponsable | null;
   createdAt: string;
+  otrasEmpresas?: string;
   empresas: { id: number; nombre: string; cuit?: string | null }[];
 };
 
@@ -101,10 +103,21 @@ export function AdminReclamosList({
       : reclamos;
 
   const filtered = visibleReclamos.filter((item) => {
-    const empresas = item.empresas.map((e) => e.nombre).join(' ');
-    const haystack =
-      `${item.id} ${item.nombre} ${item.resumen} ${item.hecho ?? ''} ${item.estadoDescripcion ?? ''} ${empresas} ${item.responsable?.name ?? ''}`.toLowerCase();
-    return haystack.includes(query.toLowerCase());
+    if (!query.trim()) return true;
+    const empresas = item.empresas
+      .map((e) => `${e.cuit ?? ''} ${e.nombre}`)
+      .join(' ');
+    const haystack = [
+      item.id,
+      item.nombre,
+      item.resumen,
+      item.hecho ?? '',
+      item.estadoDescripcion ?? '',
+      empresas,
+      item.otrasEmpresas ?? '',
+      item.responsable?.name ?? '',
+    ].join(' ');
+    return textMatchesQuery(haystack, query);
   });
 
   return (

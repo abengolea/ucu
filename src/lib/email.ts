@@ -21,6 +21,9 @@ export type SendEmailOptions = {
   to: string;
   subject: string;
   body: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+  tags?: { name: string; value: string }[];
 };
 
 export async function sendEmail(opts: SendEmailOptions): Promise<void> {
@@ -32,8 +35,16 @@ export async function sendEmail(opts: SendEmailOptions): Promise<void> {
     subject: opts.subject,
     html,
     text: opts.body,
+    replyTo: opts.replyTo,
+    headers: opts.headers,
+    tags: opts.tags,
   });
   if (error) throw new Error(error.message);
+}
+
+export function isResendConfigured(): boolean {
+  const key = process.env.RESEND_API_KEY?.trim();
+  return Boolean(key && !key.startsWith('re_REEMPLAZAR'));
 }
 
 // Convierte texto plano con saltos de línea a HTML simple con el estilo UCU

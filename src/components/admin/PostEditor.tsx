@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { slugify } from '@/lib/slug';
+import { textMatchesQuery } from '@/lib/text-search';
 import { resolveMediaUrl } from '@/lib/media';
 import type { ContentDocument } from '@/types/content';
 
@@ -177,7 +178,7 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
   }
 
   const filteredCategories = categories.filter((category) =>
-    category.name.toLowerCase().includes(categoryFilter.toLowerCase())
+    textMatchesQuery(category.name, categoryFilter)
   );
 
   const imagePreview = previewUrl || (!removeFeaturedImage ? existingImageUrl : null);

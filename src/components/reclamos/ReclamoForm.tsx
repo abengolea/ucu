@@ -74,7 +74,7 @@ export function ReclamoForm() {
 
   useEffect(() => {
     const query = empresaQuery.trim();
-    if (query.length < 2) {
+    if (!query) {
       setEmpresas([]);
       setEmpresasLoading(false);
       return;
@@ -279,7 +279,7 @@ export function ReclamoForm() {
             ))}
           </div>
         )}
-        {empresaQuery.trim().length >= 2 && (
+        {empresaQuery.trim().length > 0 && (
           <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-slate-200">
             {empresasLoading ? (
               <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-slate-500">
