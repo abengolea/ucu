@@ -104,8 +104,3 @@ env:
     value: UCU Reclamos <reclamos@consumidoresprotegidos.com.ar>
     availability:
       - RUNTIME
-
-  - variable: RESEND_WEBHOOK_SECRET
-    secret: RESEND_WEBHOOK_SECRET
-    availability:
-      - RUNTIME
