@@ -1,10 +1,25 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PostList } from '@/components/PostCard';
 import { CampaignBanner } from '@/components/campaign/CampaignBanner';
 import { CategorySidebar, HeroSection } from '@/components/SiteHeader';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { SectionHeader, ServiceCard } from '@/components/ui/PageHeader';
 import { getCategories, getRecentPosts } from '@/lib/content';
+import {
+  DEFAULT_DESCRIPTION,
+  SITE_NAME,
+  buildPageMetadata,
+  webPageJsonLd,
+} from '@/lib/seo';
 import { isFirebaseConfigured } from '@/lib/utils';
+
+export const metadata: Metadata = buildPageMetadata({
+  title: SITE_NAME,
+  description: DEFAULT_DESCRIPTION,
+  path: '/',
+  absoluteTitle: true,
+});
 
 export default async function HomePage() {
   if (!isFirebaseConfigured()) {
@@ -29,6 +44,14 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd
+        data={webPageJsonLd({
+          title: SITE_NAME,
+          description: DEFAULT_DESCRIPTION,
+          path: '/',
+          type: 'WebPage',
+        })}
+      />
       <HeroSection />
       <CampaignBanner />
 
@@ -51,7 +74,7 @@ export default async function HomePage() {
             title="Áreas de acción"
             className="mb-8"
           />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <ServiceCard
               title="Alertas de fraude"
               accent="magenta"
@@ -69,6 +92,12 @@ export default async function HomePage() {
               accent="blue"
               description="Campaña nacional, recursos y noticias sobre uno de los temas más denunciados por consumidores."
               href="/planes-de-ahorro-son-una-trampa"
+            />
+            <ServiceCard
+              title="Educación financiera"
+              accent="yellow"
+              description="Recorrido paso a paso y calculadoras de intereses, cuotas y tasa real para consumidores."
+              href="/educacion-financiera"
             />
           </div>
         </section>

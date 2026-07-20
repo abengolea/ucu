@@ -12,6 +12,7 @@ const mainNav = [
   { href: '/', label: 'Inicio' },
   { href: '/planes-de-ahorro-son-una-trampa', label: 'Campaña' },
   { href: '/posts', label: 'Noticias' },
+  { href: '/educacion-financiera', label: 'Finanzas' },
   { href: '/reclamos', label: 'Reclamos' },
   { href: '/observatorio', label: 'Observatorio' },
   { href: '/categorias', label: 'Categorías' },
@@ -80,7 +81,7 @@ export function SiteHeader() {
           id="mobile-nav"
           className={cn(
             'overflow-hidden border-t border-[var(--border)] bg-[var(--surface-raised)] transition-[max-height] duration-300 ease-out md:hidden',
-            open ? 'max-h-80' : 'max-h-0',
+            open ? 'max-h-[28rem]' : 'max-h-0',
           )}
           aria-label="Principal móvil"
         >

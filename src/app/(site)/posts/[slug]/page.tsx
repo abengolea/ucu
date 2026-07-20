@@ -1,11 +1,54 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { CommentSection } from '@/components/comments/CommentSection';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { getPostBySlug } from '@/lib/content';
 import { decodeHtmlEntities } from '@/lib/format';
 import { resolveMediaUrl, rewriteContentMediaUrls } from '@/lib/media';
-import { CommentSection } from '@/components/comments/CommentSection';
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  buildPageMetadata,
+  excerptToDescription,
+} from '@/lib/seo';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug).catch(() => null);
+  if (!post) {
+    return { title: 'Nota no encontrada' };
+  }
+
+  const title = decodeHtmlEntities(post.title);
+  const description = excerptToDescription(
+    post.excerpt,
+    `Nota de UCU sobre defensa del consumidor: ${title}`
+  );
+
+  return buildPageMetadata({
+    title,
+    description,
+    path: `/posts/${slug}`,
+    image: post.featuredImage?.url,
+    type: 'article',
+    publishedTime: post.publishedAt,
+    modifiedTime: post.modifiedAt,
+    authors: [post.author.name],
+    keywords: [
+      ...post.categories.map((c) => c.name),
+      ...post.tags.map((t) => t.name),
+      'defensa del consumidor',
+      'UCU',
+    ],
+  });
+}
 
 export default async function PostDetailPage({
   params,
@@ -18,9 +61,34 @@ export default async function PostDetailPage({
   const title = decodeHtmlEntities(post.title);
   const imageUrl = resolveMediaUrl(post.featuredImage?.url);
   const contentHtml = rewriteContentMediaUrls(post.content);
+  const description = excerptToDescription(
+    post.excerpt,
+    `Nota de UCU sobre defensa del consumidor: ${title}`
+  );
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 lg:px-6">
+      <JsonLd
+        data={[
+          articleJsonLd({
+            title,
+            description,
+            path: `/posts/${slug}`,
+            image: post.featuredImage?.url,
+            publishedAt: post.publishedAt,
+            modifiedAt: post.modifiedAt,
+            authorName: post.author.name,
+            section: post.categories[0]?.name,
+            tags: post.tags.map((t) => t.name),
+          }),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Noticias', path: '/posts' },
+            { name: title, path: `/posts/${slug}` },
+          ]),
+        ]}
+      />
+
       <Link href="/posts" className="ucu-btn-ghost mb-8 inline-flex">
         ← Volver a notas
       </Link>

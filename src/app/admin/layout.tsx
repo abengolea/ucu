@@ -1,19 +1,14 @@
-'use client';
+import type { Metadata } from 'next';
+import { AdminLayoutClient } from '@/app/admin/AdminLayoutClient';
 
-import { usePathname } from 'next/navigation';
-import { AdminAuth } from '@/components/admin/AdminAuth';
-import { AdminShell } from '@/components/admin/AdminShell';
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-
-  return (
-    <AdminAuth>
-      <AdminShell>{children}</AdminShell>
-    </AdminAuth>
-  );
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }

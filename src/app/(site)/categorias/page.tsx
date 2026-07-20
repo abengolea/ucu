@@ -1,6 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getCategories } from '@/lib/content';
+import { buildPageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Categorías',
+  description:
+    'Temas de defensa del consumidor: alertas de fraude, acciones colectivas, planes de ahorro y más publicaciones de UCU.',
+  path: '/categorias',
+});
 
 export default async function CategoriesPage() {
   const categories = await getCategories();

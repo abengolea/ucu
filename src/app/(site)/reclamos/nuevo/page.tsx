@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ReclamoForm } from '@/components/reclamos/ReclamoForm';
+import { buildPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Nuevo reclamo — Usuarios Protegidos UCU',
-  description: 'Formulario para iniciar un reclamo de consumo ante UCU.',
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Nuevo reclamo',
+  description:
+    'Iniciá un reclamo de consumo online con Usuarios Protegidos (UCU). Contanos qué pasó y seguí el caso hasta la conciliación.',
+  path: '/reclamos/nuevo',
+});
 
 export default function NuevoReclamoPage() {
   return (

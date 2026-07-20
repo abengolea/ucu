@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ReclamoConsultaForm } from '@/components/reclamos/ReclamoConsultaForm';
+import { buildPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Consultar reclamo — Usuarios Protegidos UCU',
-  description: 'Consultá el estado de tu reclamo con número de caso y documento.',
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Consultar reclamo',
+  description:
+    'Consultá el estado de tu reclamo de consumo con el número de caso y tu documento. Sistema Usuarios Protegidos de UCU.',
+  path: '/reclamos/consultar',
+});
 
 export default async function ConsultarReclamoPage({
   searchParams,

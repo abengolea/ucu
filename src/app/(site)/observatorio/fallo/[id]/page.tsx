@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { FalloPdfViewer } from '@/components/observatorio/FalloPdfViewer';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { resolveFalloFileUrl } from '@/lib/fallos-files';
 import {
   buildFalloShareTitle,
@@ -9,6 +10,12 @@ import {
   formatMonto,
   getFalloById,
 } from '@/lib/observatorio';
+import {
+  breadcrumbJsonLd,
+  buildPageMetadata,
+  truncateMeta,
+  webPageJsonLd,
+} from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,27 +28,35 @@ export async function generateMetadata({
   const fallo = await getFalloById(Number(id));
 
   if (!fallo) {
-    return { title: 'Fallo no encontrado — Observatorio UCU' };
+    return { title: 'Fallo no encontrado' };
   }
 
   const shareTitle = buildFalloShareTitle(fallo);
-  const shareDescription =
-    fallo.resumen?.slice(0, 160) || 'Detalle del fallo jurisprudencial en defensa del consumidor.';
+  const shareDescription = truncateMeta(
+    fallo.resumen ||
+      'Detalle del fallo jurisprudencial en defensa del consumidor — Observatorio UCU.'
+  );
 
-  return {
+  return buildPageMetadata({
     title: shareTitle,
     description: shareDescription,
-    openGraph: {
-      title: shareTitle,
-      description: shareDescription,
-      type: 'article',
-    },
-    twitter: {
-      card: 'summary',
-      title: shareTitle,
-      description: shareDescription,
-    },
-  };
+    path: `/observatorio/fallo/${id}`,
+    type: 'article',
+    keywords: [
+      'fallo consumidor',
+      'jurisprudencia',
+      'observatorio UCU',
+      fallo.actor,
+      demandadoKeyword(fallo),
+    ].filter((value): value is string => Boolean(value)),
+  });
+}
+
+function demandadoKeyword(
+  fallo: NonNullable<Awaited<ReturnType<typeof getFalloById>>>
+): string | undefined {
+  const value = formatDemandado(fallo);
+  return value && value !== 'Sin especificar' ? value : undefined;
 }
 
 export default async function FalloDetailPage({
@@ -58,6 +73,11 @@ export default async function FalloDetailPage({
 
   const demandado = formatDemandado(fallo);
   const monto = formatMonto(fallo);
+  const shareTitle = buildFalloShareTitle(fallo);
+  const shareDescription = truncateMeta(
+    fallo.resumen ||
+      'Detalle del fallo jurisprudencial en defensa del consumidor — Observatorio UCU.'
+  );
   const viewerFiles = fallo.files.map((file) => ({
     id: file.id,
     file: file.file,
@@ -66,6 +86,20 @@ export default async function FalloDetailPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            title: shareTitle,
+            description: shareDescription,
+            path: `/observatorio/fallo/${id}`,
+          }),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Observatorio', path: '/observatorio' },
+            { name: shareTitle, path: `/observatorio/fallo/${id}` },
+          ]),
+        ]}
+      />
       <Link
         href="/observatorio/buscar"
         className="mb-6 inline-block text-sm text-[#1a5fb4] hover:underline"

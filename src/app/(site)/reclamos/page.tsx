@@ -2,12 +2,21 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AlertTriangle, Search } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { buildPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Usuarios Protegidos — Reclamos UCU',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Usuarios Protegidos — Reclamos',
   description:
-    'Realizá tu reclamo de consumo y seguí su estado online con Usuarios y Consumidores Unidos.',
-};
+    'Realizá tu reclamo de consumo gratis y seguí su estado online con Usuarios Protegidos, el sistema de UCU hasta la conciliación con la empresa.',
+  path: '/reclamos',
+  keywords: [
+    'reclamo de consumo',
+    'Usuarios Protegidos',
+    'denuncia consumidor',
+    'conciliación consumidor',
+    'UCU',
+  ],
+});
 
 export default function ReclamosPage() {
   return (

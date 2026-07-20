@@ -1,7 +1,16 @@
+import type { Metadata } from 'next';
 import { PostList } from '@/components/PostCard';
 import { CategorySidebar } from '@/components/SiteHeader';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getAllPosts, getCategories } from '@/lib/content';
+import { buildPageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Noticias de defensa del consumidor',
+  description:
+    'Últimas noticias, alertas y análisis de Usuarios y Consumidores Unidos sobre derechos del consumidor en Argentina.',
+  path: '/posts',
+});
 
 export default async function PostsPage() {
   const [posts, categories] = await Promise.all([

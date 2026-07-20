@@ -4,13 +4,16 @@ import { FalloList } from '@/components/observatorio/FalloCard';
 import { FalloPagination } from '@/components/observatorio/FalloPagination';
 import { FalloSearchForm } from '@/components/observatorio/FalloSearchForm';
 import { getFallos, parseSearchParams } from '@/lib/observatorio';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Buscar fallos — Observatorio UCU',
-  description: 'Buscador de fallos jurisprudenciales en defensa del consumidor.',
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Buscar fallos',
+  description:
+    'Buscador de fallos jurisprudenciales en defensa del consumidor. Filtrá por actor, demandado, expediente y más en el Observatorio UCU.',
+  path: '/observatorio/buscar',
+});
 
 export default async function ObservatorioBuscarPage({
   searchParams,

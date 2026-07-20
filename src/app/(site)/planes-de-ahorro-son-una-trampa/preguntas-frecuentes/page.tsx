@@ -1,18 +1,50 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FaqAccordion } from '@/components/campaign/FaqAccordion';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { campaignFaqSections } from '@/lib/campaign-planes-ahorro';
+import {
+  breadcrumbJsonLd,
+  buildPageMetadata,
+  faqPageJsonLd,
+} from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Preguntas frecuentes — Planes de ahorro UCU',
-  description:
-    'Respuestas sobre contratación, entrega de unidades, aumentos, mora y liquidación final en planes de ahorro automotor.',
-};
+const FAQ_PATH = '/planes-de-ahorro-son-una-trampa/preguntas-frecuentes';
+const FAQ_DESCRIPTION =
+  'Respuestas claras sobre contratación, entrega de unidades, aumentos, mora y liquidación final en planes de ahorro automotor. Guía de UCU para ahorristas.';
+
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Preguntas frecuentes — Planes de ahorro',
+  description: FAQ_DESCRIPTION,
+  path: FAQ_PATH,
+  keywords: [
+    'planes de ahorro preguntas frecuentes',
+    'planes de ahorro automotor',
+    'aumentos cuota plan de ahorro',
+    'liquidación final plan de ahorro',
+    'UCU',
+  ],
+});
 
 export default function CampanaFaqPage() {
+  const faqItems = campaignFaqSections.flatMap((section) => section.items);
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 lg:px-6">
+      <JsonLd
+        data={[
+          faqPageJsonLd(faqItems, FAQ_PATH),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            {
+              name: 'Planes de ahorro',
+              path: '/planes-de-ahorro-son-una-trampa',
+            },
+            { name: 'Preguntas frecuentes', path: FAQ_PATH },
+          ]),
+        ]}
+      />
       <PageHeader
         eyebrow="Campaña · Planes de ahorro"
         title="Preguntas frecuentes"

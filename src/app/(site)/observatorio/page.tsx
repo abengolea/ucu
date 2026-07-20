@@ -2,14 +2,22 @@ import type { Metadata } from 'next';
 import { FalloList, ObservatorioHero } from '@/components/observatorio/FalloCard';
 import { SectionHeader } from '@/components/ui/PageHeader';
 import { getFallos } from '@/lib/observatorio';
+import { buildPageMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'Observatorio de fallos de consumo — UCU',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Observatorio de fallos de consumo',
   description:
-    'Antecedentes jurisprudenciales en materia de defensa del consumidor, compilados por Usuarios y Consumidores Unidos.',
-};
+    'Base de antecedentes jurisprudenciales en defensa del consumidor: buscá y consultá fallos compilados por Usuarios y Consumidores Unidos.',
+  path: '/observatorio',
+  keywords: [
+    'observatorio de fallos',
+    'jurisprudencia consumidor',
+    'fallos defensa del consumidor',
+    'UCU',
+  ],
+});
 
 export default async function ObservatorioPage() {
   let fallos: Awaited<ReturnType<typeof getFallos>> | null = null;

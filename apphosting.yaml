@@ -5,7 +5,7 @@ runConfig:
 
 env:
   - variable: NEXT_PUBLIC_APP_URL
-    value: https://ucu-staging--ucuweb-2887d.us-central1.hosted.app
+    value: https://ucu.org.ar
     availability:
       - BUILD
       - RUNTIME

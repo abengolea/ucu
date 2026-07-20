@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FalloEditor } from '@/components/admin/FalloEditor';
+import { buildPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Cargar fallo — Observatorio UCU',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Cargar fallo',
   description:
-    'Colaborá con el observatorio publicando un fallo jurisprudencial en defensa del consumidor. Sin registro previo.',
-};
+    'Colaborá con el Observatorio UCU publicando un fallo jurisprudencial en defensa del consumidor. Sin registro previo.',
+  path: '/observatorio/nuevo',
+});
 
 export default function ObservatorioNuevoFalloPage() {
   return (
