@@ -3,15 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowRight,
+  Calculator,
   Check,
   ClipboardList,
-  Coins,
   CreditCard,
-  Lock,
+  Megaphone,
+  Scale,
   Shield,
+  ShoppingBag,
   TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
 import { EducationCalculators } from '@/components/educacion-financiera/EducationCalculators';
 import {
@@ -24,12 +26,14 @@ import { cn } from '@/lib/utils';
 const STORAGE_KEY = 'ucu-edu-financiera-completed';
 
 const ICONS = {
-  coins: Coins,
   clipboard: ClipboardList,
   shield: Shield,
   'trending-down': TrendingDown,
   'credit-card': CreditCard,
-  'trending-up': TrendingUp,
+  alert: AlertTriangle,
+  shopping: ShoppingBag,
+  megaphone: Megaphone,
+  scale: Scale,
 } as const;
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
@@ -147,6 +151,7 @@ function ModuleDetail({
   onComplete,
   onBack,
   onNext,
+  onOpenCalculators,
 }: {
   mod: EducationModule;
   index: number;
@@ -154,8 +159,11 @@ function ModuleDetail({
   onComplete: () => void;
   onBack: () => void;
   onNext: (() => void) | null;
+  onOpenCalculators: () => void;
 }) {
   const Icon = ICONS[mod.icon];
+  const cta = mod.content.cta;
+  const ctaIsTools = cta?.href.startsWith('#calculadoras');
 
   return (
     <article className="ucu-animate-in">
@@ -164,17 +172,29 @@ function ModuleDetail({
       </button>
 
       <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">
-        Paso {mod.id} · {mod.subtitle}
+        Tema {mod.id} · {mod.subtitle}
       </p>
       <div className="mt-3 flex items-start gap-3">
         <span className="inline-flex rounded-md bg-ucu-blue/10 p-2.5 text-ucu-blue">
           <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
         </span>
-        <h2 className="ucu-title">{mod.title}</h2>
+        <div>
+          <h2 className="ucu-title">{mod.title}</h2>
+          <p className="mt-1 font-display text-sm font-semibold text-ucu-magenta">{mod.urgency}</p>
+        </div>
       </div>
-      <p className="mt-4 max-w-prose font-serif text-base italic leading-relaxed text-[var(--ink-muted)]">
+      <p className="mt-4 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
         {mod.content.intro}
       </p>
+
+      <aside className="mt-6 rounded-xl border border-ucu-yellow/40 bg-ucu-yellow/10 px-4 py-4 md:px-5">
+        <p className="font-display text-xs font-bold uppercase tracking-[0.16em] text-[#c48f00]">
+          {mod.content.caseStudy.title}
+        </p>
+        <p className="mt-2 font-serif text-sm leading-relaxed text-[var(--ink)]">
+          {mod.content.caseStudy.text}
+        </p>
+      </aside>
 
       <div className="mt-8 space-y-7">
         {mod.content.sections.map((s) => (
@@ -189,15 +209,35 @@ function ModuleDetail({
         ))}
       </div>
 
-      <QuizCard
-        key={mod.id}
-        quiz={mod.content.quiz}
-        onComplete={onComplete}
-      />
+      <section className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 md:px-5">
+        <h3 className="font-display text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
+          Qué hacer ahora
+        </h3>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
+          {mod.content.actions.map((action) => (
+            <li key={action}>{action}</li>
+          ))}
+        </ol>
+        {cta ? (
+          ctaIsTools ? (
+            <button type="button" onClick={onOpenCalculators} className="ucu-btn-primary mt-4">
+              {cta.label}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
+          ) : (
+            <Link href={cta.href} className="ucu-btn-primary mt-4">
+              {cta.label}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          )
+        ) : null}
+      </section>
+
+      <QuizCard key={mod.id} quiz={mod.content.quiz} onComplete={onComplete} />
 
       {completed && onNext ? (
         <button type="button" onClick={onNext} className="ucu-btn-primary mt-4 w-full">
-          Siguiente paso
+          Siguiente tema
           <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       ) : null}
@@ -205,7 +245,10 @@ function ModuleDetail({
       {completed && !onNext ? (
         <div className="mt-4 rounded-lg border border-ucu-green/40 bg-ucu-green/10 px-4 py-3 font-serif text-sm text-[#3d6e12]">
           Completaste el recorrido. Usá las calculadoras o{' '}
-          <Link href="/reclamos" className="font-display font-semibold text-ucu-blue underline-offset-2 hover:underline">
+          <Link
+            href="/reclamos"
+            className="font-display font-semibold text-ucu-blue underline-offset-2 hover:underline"
+          >
             iniciá un reclamo
           </Link>{' '}
           si una empresa te está perjudicando.
@@ -213,13 +256,14 @@ function ModuleDetail({
       ) : null}
 
       <p className="mt-6 font-display text-xs text-[var(--ink-faint)]">
-        Paso {index + 1} de {EDUCATION_MODULES.length}
+        Tema {index + 1} de {EDUCATION_MODULES.length}
       </p>
     </article>
   );
 }
 
 export function EducacionFinancieraApp() {
+  const [section, setSection] = useState<'home' | 'curso' | 'calculadoras'>('home');
   const [currentModule, setCurrentModule] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [hydrated, setHydrated] = useState(false);
@@ -246,7 +290,12 @@ export function EducacionFinancieraApp() {
     setCompleted((prev) => new Set([...prev, id]));
   };
 
-  if (currentModule !== null) {
+  const goHome = () => {
+    setCurrentModule(null);
+    setSection('home');
+  };
+
+  if (section === 'curso' && currentModule !== null) {
     const mod = EDUCATION_MODULES[currentModule];
     const hasNext = currentModule < EDUCATION_MODULES.length - 1;
     return (
@@ -257,6 +306,10 @@ export function EducacionFinancieraApp() {
           completed={completed.has(mod.id)}
           onComplete={() => markComplete(mod.id)}
           onBack={() => setCurrentModule(null)}
+          onOpenCalculators={() => {
+            setCurrentModule(null);
+            setSection('calculadoras');
+          }}
           onNext={
             hasNext && completed.has(mod.id)
               ? () => setCurrentModule(currentModule + 1)
@@ -267,9 +320,117 @@ export function EducacionFinancieraApp() {
     );
   }
 
+  if (section === 'curso') {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 lg:px-6">
+        <button type="button" onClick={goHome} className="ucu-btn-ghost mb-6">
+          ← Volver al inicio
+        </button>
+
+        <p className="ucu-eyebrow mb-2">Curso práctico</p>
+        <h1 className="ucu-title">Educación financiera</h1>
+        <p className="mt-3 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
+          Ocho temas con casos reales, checklist de acción y preguntas. Entrá por el que te urge —
+          no hace falta seguir el orden.
+        </p>
+
+        <div className="mt-8">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <p className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              {completed.size}/{EDUCATION_MODULES.length} completados
+            </p>
+            {completed.size === EDUCATION_MODULES.length ? (
+              <p className="font-display text-xs font-bold text-ucu-magenta">¡Recorrido completo!</p>
+            ) : null}
+          </div>
+          <ProgressBar current={completed.size} total={EDUCATION_MODULES.length} />
+          <p className="sr-only" aria-live="polite">
+            {completed.size} de {EDUCATION_MODULES.length} módulos completados
+          </p>
+
+          <ul className="mt-6 flex flex-col gap-2.5">
+            {EDUCATION_MODULES.map((m, i) => {
+              const done = completed.has(m.id);
+              const Icon = ICONS[m.icon];
+
+              return (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentModule(i)}
+                    className={cn(
+                      'flex w-full items-center gap-3.5 rounded-xl border px-4 py-4 text-left transition',
+                      done
+                        ? 'border-ucu-green/35 bg-ucu-green/10'
+                        : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 rounded-md p-2.5',
+                        done ? 'bg-ucu-green/20 text-[#3d6e12]' : 'bg-ucu-blue/10 text-ucu-blue',
+                      )}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                        Tema {m.id} · {m.subtitle}
+                      </span>
+                      <span className="mt-0.5 block font-display text-base font-bold tracking-tight text-[var(--ink)]">
+                        {m.title}
+                      </span>
+                      <span className="mt-1 block font-serif text-xs text-[var(--ink-muted)]">
+                        {m.urgency}
+                      </span>
+                    </span>
+                    {done ? (
+                      <Check className="h-5 w-5 shrink-0 text-[#3d6e12]" aria-label="Completado" />
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button type="button" onClick={() => setSection('calculadoras')} className="ucu-btn-secondary">
+            Ir a calculadoras
+          </button>
+          <Link href="/reclamos" className="ucu-btn-ghost">
+            ¿Te están perjudicando? Reclamos →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (section === 'calculadoras') {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 lg:px-6">
+        <button type="button" onClick={goHome} className="ucu-btn-ghost mb-6">
+          ← Volver al inicio
+        </button>
+        <EducationCalculators />
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button type="button" onClick={() => setSection('curso')} className="ucu-btn-secondary">
+            Ir al curso
+          </button>
+          <Link href="/reclamos" className="ucu-btn-ghost">
+            ¿Te están perjudicando? Reclamos →
+          </Link>
+        </div>
+        <p className="mt-8 text-center font-serif text-xs leading-relaxed text-[var(--ink-faint)]">
+          Contenido educativo general. No constituye asesoramiento financiero profesional. Las tasas
+          son ejemplos que vos podés editar.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 lg:px-6">
-      {/* Hero — brand first, one composition */}
       <header className="ucu-animate-in relative overflow-hidden rounded-2xl bg-ucu-blue px-6 py-10 text-white md:px-10 md:py-12">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -287,86 +448,55 @@ export function EducacionFinancieraApp() {
             Tu plata, tus reglas.
           </h1>
           <p className="mt-3 max-w-md font-serif text-base leading-relaxed text-white/85">
-            Aprendé finanzas personales paso a paso, con la mirada de consumidores argentinos — y
-            calculá antes de firmar.
+            Aprendé finanzas personales o calculá antes de firmar. ¿Por dónde querés empezar?
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a href="#recorrido" className="ucu-btn-outline">
-              Empezar recorrido
-            </a>
-            <a href="#calculadoras" className="rounded-md bg-white px-6 py-3 font-display text-sm font-semibold text-ucu-blue transition hover:bg-white/90">
-              Ir a calculadoras
-            </a>
-          </div>
         </div>
       </header>
 
-      <div id="recorrido" className="ucu-animate-in ucu-animate-in-delay-1 mt-10 scroll-mt-24">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <p className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-            {completed.size}/{EDUCATION_MODULES.length} completados
-          </p>
-          {completed.size === EDUCATION_MODULES.length ? (
-            <p className="font-display text-xs font-bold text-ucu-magenta">¡Recorrido completo!</p>
-          ) : null}
-        </div>
-        <ProgressBar current={completed.size} total={EDUCATION_MODULES.length} />
-        <p className="sr-only" aria-live="polite">
-          {completed.size} de {EDUCATION_MODULES.length} módulos completados
-        </p>
+      <nav
+        className="ucu-animate-in ucu-animate-in-delay-1 mt-8 grid gap-4 sm:grid-cols-2"
+        aria-label="Elegí por dónde empezar"
+      >
+        <button
+          type="button"
+          onClick={() => setSection('curso')}
+          className="ucu-card-interactive ucu-accent-top group flex flex-col p-6 text-left md:p-7"
+        >
+          <span className="mb-4 inline-flex w-fit rounded-md bg-ucu-blue/10 p-3 text-ucu-blue">
+            <ClipboardList className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="font-display text-xl font-bold tracking-tight text-[var(--ink)] group-hover:text-ucu-blue">
+            Curso práctico
+          </span>
+          <span className="mt-2 flex-1 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
+            Ocho temas con casos reales: resumen de tarjeta, cuotas, inflación, planes de ahorro y
+            cuándo reclamar. Entrá por el que te urge.
+          </span>
+          <span className="mt-5 font-display text-sm font-semibold text-ucu-magenta">
+            Empezar recorrido →
+          </span>
+        </button>
 
-        <ul className="mt-6 flex flex-col gap-2.5">
-          {EDUCATION_MODULES.map((m, i) => {
-            const done = completed.has(m.id);
-            const locked = i > 0 && !completed.has(EDUCATION_MODULES[i - 1].id) && !done;
-            const Icon = ICONS[m.icon];
-
-            return (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  disabled={locked}
-                  onClick={() => !locked && setCurrentModule(i)}
-                  className={cn(
-                    'flex w-full items-center gap-3.5 rounded-xl border px-4 py-4 text-left transition',
-                    done
-                      ? 'border-ucu-green/35 bg-ucu-green/10'
-                      : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
-                    locked && 'cursor-not-allowed opacity-45 hover:border-[var(--border)] hover:shadow-none',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'inline-flex shrink-0 rounded-md p-2.5',
-                      done ? 'bg-ucu-green/20 text-[#3d6e12]' : 'bg-ucu-blue/10 text-ucu-blue',
-                    )}
-                  >
-                    <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                      Paso {m.id} · {m.subtitle}
-                    </span>
-                    <span className="mt-0.5 block font-display text-base font-bold tracking-tight text-[var(--ink)]">
-                      {m.title}
-                    </span>
-                  </span>
-                  {done ? (
-                    <Check className="h-5 w-5 shrink-0 text-[#3d6e12]" aria-label="Completado" />
-                  ) : null}
-                  {locked ? (
-                    <Lock className="h-4 w-4 shrink-0 text-[var(--ink-faint)]" aria-label="Bloqueado" />
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div id="calculadoras" className="ucu-animate-in ucu-animate-in-delay-2 mt-10 scroll-mt-24">
-        <EducationCalculators />
-      </div>
+        <button
+          type="button"
+          onClick={() => setSection('calculadoras')}
+          className="ucu-card-interactive ucu-accent-top group flex flex-col p-6 text-left md:p-7"
+        >
+          <span className="mb-4 inline-flex w-fit rounded-md bg-ucu-yellow/20 p-3 text-[#c48f00]">
+            <Calculator className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="font-display text-xl font-bold tracking-tight text-[var(--ink)] group-hover:text-ucu-blue">
+            Calculadoras
+          </span>
+          <span className="mt-2 flex-1 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
+            Pago mínimo de tarjeta, cuotas vs. contado, tasa real e ingreso vs. gastos — con tus
+            números.
+          </span>
+          <span className="mt-5 font-display text-sm font-semibold text-ucu-magenta">
+            Abrir herramientas →
+          </span>
+        </button>
+      </nav>
 
       <section className="mt-10" aria-labelledby="glossary-heading">
         <h2 id="glossary-heading" className="font-display text-xl font-bold tracking-tight text-[var(--ink)]">
@@ -401,8 +531,7 @@ export function EducacionFinancieraApp() {
 
       <p className="mt-8 text-center font-serif text-xs leading-relaxed text-[var(--ink-faint)]">
         Contenido educativo general. No constituye asesoramiento financiero profesional. Consultá
-        con un asesor antes de tomar decisiones de inversión. Las tasas de las calculadoras son
-        ejemplos que vos podés editar.
+        con un asesor antes de tomar decisiones de inversión.
       </p>
     </div>
   );

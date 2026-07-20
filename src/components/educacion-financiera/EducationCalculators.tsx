@@ -13,11 +13,36 @@ import { cn } from '@/lib/utils';
 
 type ToolId = 'ahorro' | 'tarjeta' | 'cuotas' | 'tasa-real';
 
-const TOOLS: { id: ToolId; label: string; blurb: string }[] = [
-  { id: 'ahorro', label: 'Capacidad de ahorro', blurb: 'Ingreso, gastos y fondo de emergencia' },
-  { id: 'tarjeta', label: 'Pago mínimo', blurb: 'Qué pasa si solo pagás el mínimo' },
-  { id: 'cuotas', label: 'Cuotas vs. contado', blurb: '¿Conviene el descuento o las cuotas?' },
-  { id: 'tasa-real', label: 'Tasa real', blurb: 'Plazo fijo vs. inflación' },
+const TOOLS: {
+  id: ToolId;
+  label: string;
+  need: string;
+  blurb: string;
+}[] = [
+  {
+    id: 'ahorro',
+    label: 'Capacidad de ahorro',
+    need: '¿Cuánto puedo ahorrar?',
+    blurb: 'Ingreso vs. gastos y fondo de emergencia',
+  },
+  {
+    id: 'tarjeta',
+    label: 'Pago mínimo',
+    need: '¿Qué pasa si pago el mínimo?',
+    blurb: 'Intereses de la tarjeta si no cancelás el total',
+  },
+  {
+    id: 'cuotas',
+    label: 'Cuotas vs. contado',
+    need: '¿Cuotas o pagar de contado?',
+    blurb: 'Compará descuento de contado contra cuotas',
+  },
+  {
+    id: 'tasa-real',
+    label: 'Tasa real',
+    need: '¿Mi plazo fijo me gana a la inflación?',
+    blurb: 'Tasa nominal vs. inflación estimada',
+  },
 ];
 
 function Field({
@@ -128,44 +153,125 @@ function SavingsCalc() {
 
 function CardMinCalc() {
   const [balance, setBalance] = useState('100000');
-  const [monthlyRate, setMonthlyRate] = useState('8');
+  const [rateInput, setRateInput] = useState('8');
+  const [rateMode, setRateMode] = useState<'mensual' | 'anual'>('mensual');
   const [minPct, setMinPct] = useState('5');
+
+  const monthlyRate = useMemo(() => {
+    const raw = Number(rateInput);
+    if (!rateInput || Number.isNaN(raw)) return null;
+    return rateMode === 'anual' ? raw / 12 : raw;
+  }, [rateInput, rateMode]);
 
   const result = useMemo(() => {
     const b = Number(balance);
-    const r = Number(monthlyRate);
     const m = Number(minPct);
-    if (!balance || !monthlyRate || !minPct || [b, r, m].some(Number.isNaN)) return null;
-    return calcCardMinimumPayoff(b, r, m);
+    if (!balance || monthlyRate == null || !minPct || Number.isNaN(b) || Number.isNaN(m)) {
+      return null;
+    }
+    return calcCardMinimumPayoff(b, monthlyRate, m);
   }, [balance, monthlyRate, minPct]);
 
   const fullPayInterest = useMemo(() => {
     const b = Number(balance);
-    const r = Number(monthlyRate);
-    if (!balance || !monthlyRate || Number.isNaN(b) || Number.isNaN(r) || b <= 0) return null;
-    return b * (r / 100);
+    if (!balance || monthlyRate == null || Number.isNaN(b) || b <= 0) return null;
+    return b * (monthlyRate / 100);
   }, [balance, monthlyRate]);
 
   return (
     <div>
       <p className="mb-4 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-        Miralo en el resumen de tu tarjeta: saldo, tasa de financiación mensual y % de pago mínimo.
-        Los números por defecto son un ejemplo típico — no una cotización.
+        Completá con los datos de tu <strong className="font-semibold text-[var(--ink)]">resumen de
+        tarjeta</strong> (papel o app del banco). Los números por defecto son un ejemplo — no una
+        cotización.
       </p>
+
+      <div className="mb-4 rounded-lg border border-ucu-blue/20 bg-ucu-blue/[0.04] px-4 py-3 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
+        <p className="font-display text-xs font-bold uppercase tracking-wide text-ucu-blue">
+          ¿Dónde veo el interés?
+        </p>
+        <p className="mt-1.5">
+          En el resumen suele aparecer como <strong className="font-semibold text-[var(--ink)]">tasa de
+          financiación</strong>, <strong className="font-semibold text-[var(--ink)]">interés
+          compensatorio</strong> o <strong className="font-semibold text-[var(--ink)]">TNA / TEA</strong>.
+          Si te dan la tasa <em>anual</em> (TNA), elegí “Anual (TNA)” abajo y la convertimos a mensual
+          (÷ 12). Si ya figura el % <em>mensual</em>, usá “Mensual”.
+        </p>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Saldo adeudado $" value={balance} onChange={setBalance} placeholder="100000" />
         <Field
-          label="Interés mensual"
-          value={monthlyRate}
-          onChange={setMonthlyRate}
-          placeholder="8"
-          suffix="%"
+          label="Saldo adeudado $"
+          value={balance}
+          onChange={setBalance}
+          placeholder="100000"
         />
+        <div className="min-w-0 flex-1 sm:col-span-1">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <span className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+              Interés que cobra el banco
+            </span>
+            <div className="flex rounded-md border border-[var(--border)] p-0.5" role="group" aria-label="Tipo de tasa">
+              <button
+                type="button"
+                onClick={() => setRateMode('mensual')}
+                className={cn(
+                  'rounded px-2 py-0.5 font-display text-[0.65rem] font-semibold transition',
+                  rateMode === 'mensual'
+                    ? 'bg-ucu-blue text-white'
+                    : 'text-[var(--ink-muted)] hover:text-[var(--ink)]',
+                )}
+              >
+                Mensual
+              </button>
+              <button
+                type="button"
+                onClick={() => setRateMode('anual')}
+                className={cn(
+                  'rounded px-2 py-0.5 font-display text-[0.65rem] font-semibold transition',
+                  rateMode === 'anual'
+                    ? 'bg-ucu-blue text-white'
+                    : 'text-[var(--ink-muted)] hover:text-[var(--ink)]',
+                )}
+              >
+                Anual (TNA)
+              </button>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={rateInput}
+              onChange={(e) => setRateInput(e.target.value)}
+              placeholder={rateMode === 'anual' ? '96' : '8'}
+              className="field-input pr-10"
+              aria-label={rateMode === 'anual' ? 'Tasa nominal anual' : 'Tasa de interés mensual'}
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-[var(--ink-faint)]">
+              %
+            </span>
+          </div>
+          {monthlyRate != null && rateMode === 'anual' ? (
+            <p className="mt-1.5 font-serif text-xs text-[var(--ink-muted)]">
+              Equivale a ~{monthlyRate.toLocaleString('es-AR', { maximumFractionDigits: 2 })}% mensual
+              para esta simulación.
+            </p>
+          ) : (
+            <p className="mt-1.5 font-serif text-xs text-[var(--ink-muted)]">
+              Buscalo en el detalle de tasas del resumen.
+            </p>
+          )}
+        </div>
         <Field label="Pago mínimo" value={minPct} onChange={setMinPct} placeholder="5" suffix="%" />
       </div>
-      {result ? (
+      {result && monthlyRate != null ? (
         <ResultBox
-          tone={result.paymentBelowInterest || result.totalInterest > Number(balance) * 0.5 ? 'bad' : 'info'}
+          tone={
+            result.paymentBelowInterest || result.totalInterest > Number(balance) * 0.5
+              ? 'bad'
+              : 'info'
+          }
           title={
             result.paymentBelowInterest
               ? 'Con estos números la deuda no baja'
@@ -176,9 +282,10 @@ function CardMinCalc() {
         >
           {result.paymentBelowInterest ? (
             <p>
-              El pago mínimo ({minPct}%) es menor o igual al interés mensual ({monthlyRate}%). Cada mes
-              la deuda crece aunque pagues. La única salida es pagar más que los intereses — idealmente
-              el total.
+              El pago mínimo ({minPct}%) es menor o igual al interés mensual (
+              {monthlyRate.toLocaleString('es-AR', { maximumFractionDigits: 2 })}%). Cada mes la deuda
+              crece aunque pagues. La única salida es pagar más que los intereses — idealmente el
+              total.
             </p>
           ) : (
             <>
@@ -192,8 +299,8 @@ function CardMinCalc() {
           )}
           {fullPayInterest != null ? (
             <p className="pt-1">
-              Si pagás el total este mes, el interés de un mes sería ~${formatARS(fullPayInterest)}.
-              La diferencia con el mínimo es el costo de postergar.
+              Si pagás el total este mes, el interés de un mes sería ~$
+              {formatARS(fullPayInterest)}. La diferencia con el mínimo es el costo de postergar.
             </p>
           ) : null}
         </ResultBox>
@@ -327,61 +434,101 @@ function RealRateCalc() {
 }
 
 export function EducationCalculators() {
-  const [tool, setTool] = useState<ToolId>('tarjeta');
+  const [tool, setTool] = useState<ToolId | null>(null);
+  const active = tool ? TOOLS.find((t) => t.id === tool) : null;
 
   return (
-    <section aria-labelledby="calc-heading" className="ucu-card ucu-accent-top p-5 md:p-7">
+    <section aria-labelledby="calc-heading">
       <p className="ucu-section-title mb-2">Herramientas</p>
-      <h2 id="calc-heading" className="font-display text-2xl font-bold tracking-tight text-[var(--ink)]">
+      <h1 id="calc-heading" className="ucu-title">
         Calculadoras
-      </h2>
-      <p className="mt-2 max-w-prose font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-        Números orientativos para decidir mejor. No reemplazan el resumen de tu banco ni un asesor.
+      </h1>
+      <p className="mt-3 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
+        Elegí la que necesités. Son números orientativos: no reemplazan el resumen de tu banco ni un
+        asesor.
       </p>
 
-      <div
-        className="mt-5 flex gap-2 overflow-x-auto pb-1"
-        role="tablist"
-        aria-label="Elegir calculadora"
-      >
-        {TOOLS.map((t) => {
-          const active = tool === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTool(t.id)}
-              className={cn(
-                'shrink-0 rounded-md px-3.5 py-2 text-left transition',
-                active
-                  ? 'bg-ucu-blue text-white'
-                  : 'border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--ink)] hover:border-ucu-blue/40',
-              )}
-            >
-              <span className="block font-display text-xs font-bold uppercase tracking-wide">
-                {t.label}
-              </span>
-              <span
-                className={cn(
-                  'mt-0.5 block max-w-[11rem] font-serif text-[0.7rem] leading-snug',
-                  active ? 'text-white/80' : 'text-[var(--ink-muted)]',
-                )}
+      {tool === null || !active ? (
+        <div className="mt-8">
+          <p className="mb-3 font-display text-sm font-bold text-[var(--ink)]">
+            ¿Qué necesitás calcular?
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2" role="list">
+            {TOOLS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="listitem"
+                onClick={() => setTool(t.id)}
+                className="ucu-card-interactive group flex flex-col p-5 text-left"
               >
-                {t.blurb}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span className="font-display text-base font-bold tracking-tight text-[var(--ink)] group-hover:text-ucu-blue sm:text-lg">
+                  {t.need}
+                </span>
+                <span className="mt-1.5 font-serif text-sm leading-snug text-[var(--ink-muted)]">
+                  {t.blurb}
+                </span>
+                <span className="mt-4 font-display text-sm font-semibold text-ucu-magenta">
+                  Abrir →
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={() => setTool(null)}
+            className="ucu-btn-ghost mb-5"
+          >
+            ← Ver todas las calculadoras
+          </button>
 
-      <div className="mt-6" role="tabpanel">
-        {tool === 'ahorro' ? <SavingsCalc /> : null}
-        {tool === 'tarjeta' ? <CardMinCalc /> : null}
-        {tool === 'cuotas' ? <InstallmentsCalc /> : null}
-        {tool === 'tasa-real' ? <RealRateCalc /> : null}
-      </div>
+          <div className="ucu-card ucu-accent-top p-5 md:p-7">
+            <p className="font-display text-xs font-bold uppercase tracking-[0.16em] text-ucu-blue">
+              {active.label}
+            </p>
+            <h2 className="mt-1 font-display text-xl font-bold tracking-tight text-[var(--ink)] md:text-2xl">
+              {active.need}
+            </h2>
+
+            <div
+              className="mt-4 flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Cambiar de calculadora"
+            >
+              {TOOLS.map((t) => {
+                const selected = t.id === tool;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setTool(t.id)}
+                    className={cn(
+                      'rounded-md px-3 py-1.5 font-display text-xs font-semibold transition',
+                      selected
+                        ? 'bg-ucu-blue text-white'
+                        : 'border border-[var(--border)] text-[var(--ink)] hover:border-ucu-blue/40',
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6" role="tabpanel">
+              {tool === 'ahorro' ? <SavingsCalc /> : null}
+              {tool === 'tarjeta' ? <CardMinCalc /> : null}
+              {tool === 'cuotas' ? <InstallmentsCalc /> : null}
+              {tool === 'tasa-real' ? <RealRateCalc /> : null}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

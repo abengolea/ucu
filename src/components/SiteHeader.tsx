@@ -12,7 +12,7 @@ const mainNav = [
   { href: '/', label: 'Inicio' },
   { href: '/planes-de-ahorro-son-una-trampa', label: 'Campaña' },
   { href: '/posts', label: 'Noticias' },
-  { href: '/educacion-financiera', label: 'Finanzas' },
+  { href: '/educacion-financiera', label: 'Educación financiera' },
   { href: '/reclamos', label: 'Reclamos' },
   { href: '/observatorio', label: 'Observatorio' },
   { href: '/categorias', label: 'Categorías' },
