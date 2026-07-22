@@ -9,31 +9,34 @@ import {
   Check,
   ClipboardList,
   CreditCard,
-  Megaphone,
-  Scale,
-  Shield,
-  ShoppingBag,
-  TrendingDown,
+  ExternalLink,
+  Percent,
+  PiggyBank,
+  Receipt,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react';
+import { CoursePretest } from '@/components/educacion-financiera/CoursePretest';
+import { CourseTemplates } from '@/components/educacion-financiera/CourseTemplates';
 import { EducationCalculators } from '@/components/educacion-financiera/EducationCalculators';
 import {
   EDUCATION_MODULES,
-  GLOSSARY,
   type EducationModule,
 } from '@/lib/educacion-financiera/modules';
 import { cn } from '@/lib/utils';
 
-const STORAGE_KEY = 'ucu-edu-financiera-completed';
+const STORAGE_KEY = 'ucu-edu-financiera-v2-completed';
+const PRETEST_KEY = 'ucu-edu-financiera-v2-pretest-done';
 
 const ICONS = {
   clipboard: ClipboardList,
-  shield: Shield,
-  'trending-down': TrendingDown,
+  piggy: PiggyBank,
   'credit-card': CreditCard,
+  wallet: Wallet,
+  'trending-up': TrendingUp,
+  receipt: Receipt,
+  percent: Percent,
   alert: AlertTriangle,
-  shopping: ShoppingBag,
-  megaphone: Megaphone,
-  scale: Scale,
 } as const;
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
@@ -233,6 +236,32 @@ function ModuleDetail({
         ) : null}
       </section>
 
+      {mod.content.resources.length > 0 ? (
+        <section className="mt-6">
+          <h3 className="font-display text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
+            Fuentes oficiales
+          </h3>
+          <ul className="mt-3 space-y-2">
+            {mod.content.resources.map((r) => (
+              <li key={r.href + r.label}>
+                <a
+                  href={r.href}
+                  target={r.href.startsWith('http') ? '_blank' : undefined}
+                  rel={r.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="inline-flex items-start gap-2 font-serif text-sm text-ucu-blue underline-offset-2 hover:underline"
+                >
+                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>
+                    {r.label}
+                    <span className="text-[var(--ink-faint)]"> · {r.source}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <QuizCard key={mod.id} quiz={mod.content.quiz} onComplete={onComplete} />
 
       {completed && onNext ? (
@@ -244,14 +273,8 @@ function ModuleDetail({
 
       {completed && !onNext ? (
         <div className="mt-4 rounded-lg border border-ucu-green/40 bg-ucu-green/10 px-4 py-3 font-serif text-sm text-[#3d6e12]">
-          Completaste el recorrido. Usá las calculadoras o{' '}
-          <Link
-            href="/reclamos"
-            className="font-display font-semibold text-ucu-blue underline-offset-2 hover:underline"
-          >
-            iniciá un reclamo
-          </Link>{' '}
-          si una empresa te está perjudicando.
+          Completaste el recorrido. Probá las calculadoras con tus números reales para cerrar el
+          círculo.
         </div>
       ) : null}
 
@@ -266,6 +289,7 @@ export function EducacionFinancieraApp() {
   const [section, setSection] = useState<'home' | 'curso' | 'calculadoras'>('home');
   const [currentModule, setCurrentModule] = useState<number | null>(null);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const [showPretest, setShowPretest] = useState(true);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -275,6 +299,7 @@ export function EducacionFinancieraApp() {
         const ids = JSON.parse(raw) as number[];
         if (Array.isArray(ids)) setCompleted(new Set(ids));
       }
+      if (localStorage.getItem(PRETEST_KEY) === '1') setShowPretest(false);
     } catch {
       /* ignore */
     }
@@ -288,6 +313,15 @@ export function EducacionFinancieraApp() {
 
   const markComplete = (id: number) => {
     setCompleted((prev) => new Set([...prev, id]));
+  };
+
+  const finishPretest = () => {
+    setShowPretest(false);
+    try {
+      localStorage.setItem(PRETEST_KEY, '1');
+    } catch {
+      /* ignore */
+    }
   };
 
   const goHome = () => {
@@ -327,80 +361,109 @@ export function EducacionFinancieraApp() {
           ← Volver al inicio
         </button>
 
-        <p className="ucu-eyebrow mb-2">Curso práctico</p>
+        <p className="ucu-eyebrow mb-2">Curso gratuito · Autoaprendizaje</p>
         <h1 className="ucu-title">Educación financiera</h1>
         <p className="mt-3 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
-          Ocho temas con casos reales, checklist de acción y preguntas. Entrá por el que te urge —
-          no hace falta seguir el orden.
+          Ocho módulos alineados a lineamientos públicos (presupuesto, crédito, productos, inversiones,
+          impuestos, tasas de interés y sobreendeudamiento). Casos locales, fuentes oficiales y plantillas.
+          Entrá por el tema que te urge.
         </p>
 
-        <div className="mt-8">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <p className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-              {completed.size}/{EDUCATION_MODULES.length} completados
-            </p>
-            {completed.size === EDUCATION_MODULES.length ? (
-              <p className="font-display text-xs font-bold text-ucu-magenta">¡Recorrido completo!</p>
-            ) : null}
+        {showPretest ? (
+          <div className="mt-8">
+            <CoursePretest onFinished={finishPretest} onSkip={finishPretest} />
           </div>
-          <ProgressBar current={completed.size} total={EDUCATION_MODULES.length} />
-          <p className="sr-only" aria-live="polite">
-            {completed.size} de {EDUCATION_MODULES.length} módulos completados
-          </p>
+        ) : (
+          <>
+            <div className="mt-8">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <p className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                  {completed.size}/{EDUCATION_MODULES.length} completados
+                </p>
+                {completed.size === EDUCATION_MODULES.length ? (
+                  <p className="font-display text-xs font-bold text-ucu-magenta">¡Recorrido completo!</p>
+                ) : null}
+              </div>
+              <ProgressBar current={completed.size} total={EDUCATION_MODULES.length} />
+              <p className="sr-only" aria-live="polite">
+                {completed.size} de {EDUCATION_MODULES.length} módulos completados
+              </p>
 
-          <ul className="mt-6 flex flex-col gap-2.5">
-            {EDUCATION_MODULES.map((m, i) => {
-              const done = completed.has(m.id);
-              const Icon = ICONS[m.icon];
+              <ul className="mt-6 flex flex-col gap-2.5">
+                {EDUCATION_MODULES.map((m, i) => {
+                  const done = completed.has(m.id);
+                  const Icon = ICONS[m.icon];
 
-              return (
-                <li key={m.id}>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentModule(i)}
-                    className={cn(
-                      'flex w-full items-center gap-3.5 rounded-xl border px-4 py-4 text-left transition',
-                      done
-                        ? 'border-ucu-green/35 bg-ucu-green/10'
-                        : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'inline-flex shrink-0 rounded-md p-2.5',
-                        done ? 'bg-ucu-green/20 text-[#3d6e12]' : 'bg-ucu-blue/10 text-ucu-blue',
-                      )}
-                    >
-                      <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        Tema {m.id} · {m.subtitle}
-                      </span>
-                      <span className="mt-0.5 block font-display text-base font-bold tracking-tight text-[var(--ink)]">
-                        {m.title}
-                      </span>
-                      <span className="mt-1 block font-serif text-xs text-[var(--ink-muted)]">
-                        {m.urgency}
-                      </span>
-                    </span>
-                    {done ? (
-                      <Check className="h-5 w-5 shrink-0 text-[#3d6e12]" aria-label="Completado" />
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                  return (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentModule(i)}
+                        className={cn(
+                          'flex w-full items-center gap-3.5 rounded-xl border px-4 py-4 text-left transition',
+                          done
+                            ? 'border-ucu-green/35 bg-ucu-green/10'
+                            : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex shrink-0 rounded-md p-2.5',
+                            done ? 'bg-ucu-green/20 text-[#3d6e12]' : 'bg-ucu-blue/10 text-ucu-blue',
+                          )}
+                        >
+                          <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                            Módulo {m.id} · {m.subtitle}
+                          </span>
+                          <span className="mt-0.5 block font-display text-base font-bold tracking-tight text-[var(--ink)]">
+                            {m.title}
+                          </span>
+                          <span className="mt-1 block font-serif text-xs text-[var(--ink-muted)]">
+                            {m.urgency}
+                          </span>
+                        </span>
+                        {done ? (
+                          <Check className="h-5 w-5 shrink-0 text-[#3d6e12]" aria-label="Completado" />
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <CourseTemplates />
+
+            <p className="mt-6 font-serif text-xs text-[var(--ink-faint)]">
+              Contenido educativo. Enlazamos recursos de BCRA, CNV y ARCA; verificá siempre la
+              información vigente en el sitio oficial.
+            </p>
+          </>
+        )}
 
         <div className="mt-8 flex flex-wrap gap-3">
           <button type="button" onClick={() => setSection('calculadoras')} className="ucu-btn-secondary">
             Ir a calculadoras
           </button>
-          <Link href="/reclamos" className="ucu-btn-ghost">
-            ¿Te están perjudicando? Reclamos →
-          </Link>
+          {!showPretest ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowPretest(true);
+                try {
+                  localStorage.removeItem(PRETEST_KEY);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className="ucu-btn-ghost"
+            >
+              Repetir diagnóstico
+            </button>
+          ) : null}
         </div>
       </div>
     );
@@ -417,9 +480,6 @@ export function EducacionFinancieraApp() {
           <button type="button" onClick={() => setSection('curso')} className="ucu-btn-secondary">
             Ir al curso
           </button>
-          <Link href="/reclamos" className="ucu-btn-ghost">
-            ¿Te están perjudicando? Reclamos →
-          </Link>
         </div>
         <p className="mt-8 text-center font-serif text-xs leading-relaxed text-[var(--ink-faint)]">
           Contenido educativo general. No constituye asesoramiento financiero profesional. Las tasas
@@ -469,8 +529,8 @@ export function EducacionFinancieraApp() {
             Curso práctico
           </span>
           <span className="mt-2 flex-1 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-            Ocho temas con casos reales: resumen de tarjeta, cuotas, inflación, planes de ahorro y
-            cuándo reclamar. Entrá por el que te urge.
+            Ocho módulos con diagnóstico, plantillas y fuentes oficiales. Foco en plata cotidiana:
+            presupuesto, tasas, deudas y cómo no firmar a ciegas.
           </span>
           <span className="mt-5 font-display text-sm font-semibold text-ucu-magenta">
             Empezar recorrido →
@@ -497,37 +557,6 @@ export function EducacionFinancieraApp() {
           </span>
         </button>
       </nav>
-
-      <section className="mt-10" aria-labelledby="glossary-heading">
-        <h2 id="glossary-heading" className="font-display text-xl font-bold tracking-tight text-[var(--ink)]">
-          Glosario rápido
-        </h2>
-        <p className="mt-1 font-serif text-sm text-[var(--ink-muted)]">
-          Términos que aparecen en resúmenes de tarjeta, créditos y apps de inversión.
-        </p>
-        <dl className="mt-5 divide-y divide-[var(--border)] border-y border-[var(--border)]">
-          {GLOSSARY.map((item) => (
-            <div key={item.term} className="grid gap-1 py-3.5 sm:grid-cols-[7rem_1fr] sm:gap-4">
-              <dt className="font-display text-sm font-bold text-ucu-blue">{item.term}</dt>
-              <dd className="font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-                {item.definition}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="mt-10 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6">
-        <h2 className="font-display text-lg font-bold text-[var(--ink)]">¿Te están perjudicando?</h2>
-        <p className="mt-2 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-          Educación es el primer paso. Si un banco, comercio o empresa te cobró mal, no te dejan
-          cancelar o te encerró en un plan de ahorro, UCU puede ayudarte con un reclamo.
-        </p>
-        <Link href="/reclamos" className="ucu-btn-primary mt-5">
-          Ir a reclamos
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
-      </section>
 
       <p className="mt-8 text-center font-serif text-xs leading-relaxed text-[var(--ink-faint)]">
         Contenido educativo general. No constituye asesoramiento financiero profesional. Consultá

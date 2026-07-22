@@ -9,7 +9,7 @@ import {
 
 const PATH = '/educacion-financiera';
 const DESCRIPTION =
-  'Educación financiera para consumidores en Argentina: presupuesto, inflación, deudas y calculadoras de intereses, cuotas y tasa real. Herramientas prácticas de UCU.';
+  'Curso gratuito de educación financiera para consumidores argentinos: presupuesto, crédito, tasas de interés, sobreendeudamiento, cuentas y medios de pago. Con calculadoras, plantillas y fuentes oficiales (BCRA, CNV, UCU).';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Educación financiera',
@@ -17,10 +17,11 @@ export const metadata: Metadata = buildPageMetadata({
   path: PATH,
   keywords: [
     'educación financiera',
-    'calculadora de intereses',
-    'tasa real',
+    'curso gratuito',
     'presupuesto personal',
-    'inflación Argentina',
+    'pago mínimo tarjeta',
+    'defensa del consumidor',
+    'BCRA',
     'UCU',
   ],
 });

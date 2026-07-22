@@ -15,6 +15,12 @@ export type ModuleCta = {
   href: string;
 };
 
+export type OfficialResource = {
+  label: string;
+  href: string;
+  source: string;
+};
+
 export type EducationModule = {
   id: number;
   title: string;
@@ -22,21 +28,19 @@ export type EducationModule = {
   urgency: string;
   icon:
     | 'clipboard'
-    | 'trending-down'
+    | 'piggy'
     | 'credit-card'
-    | 'alert'
-    | 'shopping'
-    | 'shield'
-    | 'megaphone'
-    | 'scale';
+    | 'wallet'
+    | 'trending-up'
+    | 'receipt'
+    | 'percent'
+    | 'alert';
   content: {
     intro: string;
-    caseStudy: {
-      title: string;
-      text: string;
-    };
+    caseStudy: { title: string; text: string };
     sections: ModuleSection[];
     actions: string[];
+    resources: OfficialResource[];
     quiz: ModuleQuiz;
     cta?: ModuleCta;
   };
@@ -46,274 +50,110 @@ export const EDUCATION_MODULES: EducationModule[] = [
   {
     id: 1,
     icon: 'clipboard',
-    title: 'El mapa de tu plata',
-    subtitle: 'Presupuesto real',
+    title: 'Salud financiera y presupuesto',
+    subtitle: 'Ordená el mes',
     urgency: 'Si no sabés a dónde se va el sueldo',
     content: {
       intro:
-        'Sin mapa, cualquier “ahorro” es ilusión. En Argentina el mes se come solo: el punto no es castigarte, es ver números antes de que el resumen te sorprenda.',
+        'La salud financiera empieza por ver números sin juzgarte. Distinguir ingresos, gastos fijos, variables y “hormiga” es el primer paso para decidir, no para castigarte.',
       caseStudy: {
-        title: 'Caso: Lucía, sueldo $650.000',
-        text: 'Alquila, tiene prepaga, dos hijos en colegio y usa la tarjeta “para llegar”. A fin de mes “no le sobra nada”, pero no sabe cuánto se fue en delivery, cuotas y efectivo. Anota 30 días: descubre $95.000 en gastos chicos y tres cuotas que olvidó. Recién ahí puede decidir qué cortar.',
+        title: 'Caso: Lucía y los gastos hormiga',
+        text: 'Sueldo estable, alquiler y prepaga al día. “No le sobra nada”, pero no registra. En 30 días aparece: delivery, suscripciones y efectivo sin control por casi $90.000. Recién con la planilla puede cortar tres ítems y armar un margen mínimo.',
       },
       sections: [
         {
-          heading: 'Primero contá, después juzgues',
-          text: 'Durante un mes registrá todo: transferencia, débito, efectivo y cuotas que ya firmaste. Separá fijos (alquiler, servicios, prepaga, transporte, cuotas) de variables (comida, salidas, ropa). El shock de ver la lista es el primer ahorro.',
+          heading: 'Ingresos, necesidades y deseos',
+          text: 'Separá ingresos periódicos (sueldo, jubilación, changa fija) de esporádicos. Clasificá gastos en necesidades, deseos y obligaciones (cuotas, deudas). Lo que no se nombra, se come solo.',
         },
         {
-          heading: 'Regla útil en inflación alta',
-          text: 'Olvidate del 50/30/20 de manual extranjero si no te cierra. Apuntá a: 1) cubrir fijos sin refinanciar, 2) dejar un % aunque sea chico para colchón, 3) que los gustos no se paguen con deuda cara. Si el fijo ya te come el 80%, el problema no es “disciplina”: hay que renegociar gastos o ingresos.',
+          heading: 'Gastos hormiga',
+          text: 'Son montos chicos y repetidos: café, apps, envíos, “una compra más”. No son pecados: son datos. Sumalos un mes y decidí cuáles vale la pena mantener.',
         },
         {
-          heading: 'Usá la calculadora de ahorro',
-          text: 'En Herramientas → “¿Cuánto puedo ahorrar?” cargá tu ingreso y gastos. Te estima el margen y cuánto tardarías en armar 3 meses de emergencia. Los montos de ejemplo son orientativos: usá los tuyos.',
+          heading: 'Plantilla + calculadora',
+          text: 'Completá la plantilla de presupuesto de este curso y usá la calculadora “¿Cuánto puedo ahorrar?”. Los ejemplos son orientativos: cargá tus montos reales.',
         },
       ],
       actions: [
-        'Anotá 7 días de gastos (app, planilla o cuaderno).',
-        'Listá todas las cuotas vigentes y su vencimiento.',
-        'Probá la calculadora de capacidad de ahorro con tus números.',
+        'Descargá/imprimí la plantilla de presupuesto y completala con el mes actual.',
+        'Listá fijos, variables y cuotas vigentes.',
+        'Probá la calculadora de capacidad de ahorro.',
+      ],
+      resources: [
+        {
+          label: 'Presupuesto e inclusión financiera (Ministerio de Economía)',
+          href: 'https://www.argentina.gob.ar/economia/inclusion-financiera',
+          source: 'Ministerio de Economía',
+        },
+        {
+          label: 'Educación financiera BCRA',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Educacion_Financiera.asp',
+          source: 'BCRA',
+        },
       ],
       quiz: {
-        question: 'Lucía “no llega” pero no registra gastos. ¿Cuál es el primer paso útil?',
+        question: '¿Cuál es el primer paso útil si “no llegás” pero no registrás gastos?',
         options: [
-          'Pedir un préstamo para “acomodarse”',
-          'Anotar ingresos, fijos, variables y cuotas un mes',
+          'Pedir un préstamo para acomodarte',
+          'Anotar ingresos, fijos, variables y gastos hormiga un mes',
           'Pasar todo a dólares sin mirar el presupuesto',
         ],
         correct: 1,
         explanation:
-          'Sin registro no hay decisión: primero medir. El crédito o la dolarización sin mapa suelen agravar el agujero.',
+          'Sin registro no hay decisión. El crédito o la dolarización sin mapa suelen agravar el agujero.',
       },
     },
   },
   {
     id: 2,
-    icon: 'trending-down',
-    title: 'Inflación en la práctica',
-    subtitle: 'Poder de compra',
-    urgency: 'Si tu plata “se achica” aunque no la gastes',
+    icon: 'piggy',
+    title: 'Ahorro y metas',
+    subtitle: 'Fondo y horizonte',
+    urgency: 'Si querés ahorrar pero se te escapa',
     content: {
       intro:
-        'La inflación no es una noticia: es el impuesto silencioso sobre el efectivo parado y sobre las tasas “lindas” que en realidad pierden contra los precios.',
+        'Ahorrar no es “lo que sobra”: es una decisión con meta y plazo. Antes de invertir, conviene tener capacidad de ahorro identificada y un colchón líquido.',
       caseStudy: {
-        title: 'Caso: Jorge y el plazo fijo',
-        text: 'Jorge pone $500.000 a 30 días porque “rinde”. La tasa nominal se ve bien en pesos, pero la inflación del período es más alta. Al vencimiento tiene más billetes… y compra menos. Recién cuando mira tasa real entiende que “ganar” en el extracto no es ganar en el súper.',
+        title: 'Caso: metas de Sofía',
+        text: 'Quiere “ahorrar más” sin fecha. Separa tres horizontes: emergencia (3 meses de fijos), un electrodoméstico en 8 meses, y un objetivo a 3 años. Recién ahí el monto mensual deja de ser abstracto.',
       },
       sections: [
         {
-          heading: 'Tasa nominal vs. tasa real',
-          text: 'Nominal: lo que te anuncian. Real: lo que te queda después de la inflación. Aprox.: nominal − inflación. Más preciso: (1+nominal)/(1+inflación) − 1. Si da negativo, tu poder de compra baja aunque el saldo suba.',
+          heading: 'Guardar, ahorrar e invertir',
+          text: 'Guardar: plata disponible ya. Ahorrar: apartar con meta. Invertir: asumir riesgo a cambio de posible rentabilidad. Mezclar los tres sin orden suele terminar en la tarjeta.',
         },
         {
-          heading: 'Qué mirar antes de “estacionar” plata',
-          text: 'Compará el rendimiento con una inflación estimada del mismo plazo. Opciones que suelen usarse para no perder tanto: cuentas remuneradas, FCI money market, plazo fijo UVA (ajusta por CER). Ninguna es mágica ni riesgo cero: leé costos y plazos de salida.',
+          heading: 'Fondo de emergencia',
+          text: 'Meta realista: 3 meses de gastos fijos (ideal 6), en algo líquido (cuenta remunerada, FCI money market). Rendimiento alto con trabas no sirve para imprevistos.',
         },
         {
-          heading: 'Dólar: herramienta, no religión',
-          text: 'Muchos se cubren comprando dólar MEP por cuenta comitente (vía legal). Sirve como cobertura de largo plazo, no como excusa para no tener un colchón líquido en pesos para gastos del mes. Usá la calculadora de tasa real con tus %.',
+          heading: 'Automatizá el día de cobro',
+          text: 'Un transfer automático —aunque sea chico— gana a la buena voluntad de fin de mes. Subí el monto cuando canceles una cuota.',
         },
       ],
       actions: [
-        'Anotá la tasa de tu plazo fijo o cuenta y una inflación mensual estimada.',
-        'Corré la calculadora “¿Mi plazo fijo me gana a la inflación?”.',
-        'Revisá si tenés plata “parada” en cuenta sin remunerar.',
+        'Escribí 3 metas (corto / mediano / largo) con monto y plazo.',
+        'Calculá 3 × tus gastos fijos para el colchón.',
+        'Programá un ahorro automático el día de cobro.',
       ],
-      quiz: {
-        question: 'Un plazo fijo rinde 3% mensual y la inflación del mes es 4%. ¿Qué pasó?',
-        options: [
-          'Ganó poder de compra',
-          'Perdió poder de compra (tasa real negativa)',
-          'Da igual: en pesos tiene más',
-        ],
-        correct: 1,
-        explanation:
-          'Más pesos no implica más poder de compra. Con inflación mayor a la tasa, perdés en términos reales.',
-      },
-    },
-  },
-  {
-    id: 3,
-    icon: 'credit-card',
-    title: 'Leer el resumen de tarjeta',
-    subtitle: 'TNA, CFT y trampa chica',
-    urgency: 'Si el resumen te confunde o te asusta',
-    content: {
-      intro:
-        'El resumen no es un trámite: es el contrato del mes. Ahí está escrito cuánto te cobran de verdad si no cerrás el saldo.',
-      caseStudy: {
-        title: 'Caso: Ana y el “mínimo conveniente”',
-        text: 'Ana debía $220.000. El mínimo parecía “bajo” y lo pagó tres meses. Cuando sumó intereses, seguros y gastos, la deuda había crecido. Nadie le explicó que el % de financiación del resumen (TNA/TEA) era el precio de postergar.',
-      },
-      sections: [
+      resources: [
         {
-          heading: 'Tres líneas que tenés que encontrar',
-          text: '1) Saldo de cierre / total a pagar. 2) Pago mínimo. 3) Tasas: financiación, punitorios, TNA, TEA y —si figura— CFT. También mirá fecha de vencimiento y fecha de cierre (comprar después del cierre empuja al próximo resumen).',
+          label: 'Inclusión financiera: ahorro',
+          href: 'https://www.argentina.gob.ar/economia/inclusion-financiera',
+          source: 'Ministerio de Economía',
         },
         {
-          heading: 'TNA, TEA y CFT en criollo',
-          text: 'TNA: tasa nominal anual. TEA: efectiva anual (suele ser más alta). CFT: costo financiero total (intereses + seguros + comisiones). Para comparar un préstamo o una refinanciación, el CFT es más honesto que la “cuota linda”.',
+          label: 'Comparador de tasas de plazo fijo (BCRA)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Comparador_de_tasas.asp',
+          source: 'BCRA',
         },
-        {
-          heading: 'Señales de alerta',
-          text: 'Pago mínimo que casi no baja el capital; refinanciación automática; seguros que no pediste; “planes de pago” con CFT enorme. Si hay cobros dudosos o no te dan información clara, podés reclamar.',
-        },
-      ],
-      actions: [
-        'Abrí el último resumen (PDF o app) y marcá saldo, mínimo y tasas.',
-        'Probá la calculadora de pago mínimo con tu saldo y tu tasa.',
-        'Si hay un cargo que no reconocés, guardá el resumen y consultá un reclamo.',
-      ],
-      quiz: {
-        question: '¿Qué dato del resumen te dice mejor el costo real de financiarte?',
-        options: [
-          'Solo el pago mínimo',
-          'El CFT (y si no está, TNA/TEA de financiación)',
-          'El diseño de la app del banco',
-        ],
-        correct: 1,
-        explanation:
-          'El mínimo es una trampa de liquidez. El costo real está en las tasas y, mejor aún, en el CFT.',
-      },
-      cta: {
-        label: '¿Te cobraron mal? Ir a reclamos',
-        href: '/reclamos',
-      },
-    },
-  },
-  {
-    id: 4,
-    icon: 'alert',
-    title: 'La trampa del pago mínimo',
-    subtitle: 'Deudas caras',
-    urgency: 'Si venís pagando solo el mínimo',
-    content: {
-      intro:
-        'Pagar el mínimo no es “estar al día”: es firmar una cuota cara todos los meses. En Argentina esas tasas pueden volatilizar cualquier presupuesto.',
-      caseStudy: {
-        title: 'Caso: Martín debe $100.000',
-        text: 'Interés mensual alto y mínimo del 5%. Como el mínimo no cubre los intereses, la deuda crece aunque “pague todos los meses”. Cuando simula en la calculadora, entiende que necesita un plan de pago por encima del interés — o consolidar en mejores condiciones.',
-      },
-      sections: [
-        {
-          heading: 'Deuda útil vs. deuda que te come',
-          text: 'Útil: te deja un activo o ingreso (hipoteca razonable, stock para un monotributo). Cara: consumo con tarjeta refinanciada, “adelantos” y planes eternos. La prioridad es matar primero la deuda con mayor tasa.',
-        },
-        {
-          heading: 'Plan de salida práctico',
-          text: '1) Dejá de sumar compras a esa tarjeta. 2) Pagá siempre más que los intereses del mes. 3) Ordená deudas: avalancha (la más cara primero) o bola de nieve (la más chica primero, por motivación). 4) Pedí al banco el CFT de cualquier refinanciación antes de firmar.',
-        },
-        {
-          heading: 'Si no te dejan cancelar o te empujan a refinanciar',
-          text: 'Pedí por escrito el detalle de deuda y tasas. Grabá/guardá ofertas. Si hay abuso, cláusulas engañosas o cobranzas agresivas, UCU puede ayudarte a reclamar.',
-        },
-      ],
-      actions: [
-        'Simulá tu caso en “¿Qué pasa si pago el mínimo?”.',
-        'Fijá un monto de pago > intereses y anotalo como fijo del mes.',
-        'Cortá nuevas compras en esa tarjeta hasta salir.',
-      ],
-      quiz: {
-        question: 'El pago mínimo es menor que el interés del mes. ¿Qué conviene?',
-        options: [
-          'Seguir así: “al menos pago algo”',
-          'Pagar más que los intereses (ideal: el total) y frenar compras nuevas',
-          'Sacar otra tarjeta para pagar esta',
-        ],
-        correct: 1,
-        explanation:
-          'Si el mínimo no cubre intereses, la deuda crece. Otra tarjeta suele ser la misma trampa con otro logo.',
-      },
-      cta: {
-        label: 'Abrir calculadora de pago mínimo',
-        href: '#calculadoras-pago-minimo',
-      },
-    },
-  },
-  {
-    id: 5,
-    icon: 'shopping',
-    title: 'Cuotas vs. contado',
-    subtitle: 'El precio escondido',
-    urgency: 'Si te ofrecen “sin interés” o descuento de contado',
-    content: {
-      intro:
-        'En el comercio argentino el interés a menudo viene metido en el precio de lista. La pregunta no es “¿tengo cuotas?”, es “¿cuánto me sale cada camino?”.',
-      caseStudy: {
-        title: 'Caso: un televisor “12 sin interés”',
-        text: 'Lista $200.000 en 12 cuotas. De contado hay 15% off. Las cuotas “sin interés” salen $200.000; el contado, $170.000. La diferencia es el costo de financiar — aunque el cartel diga cero.',
-      },
-      sections: [
-        {
-          heading: 'Regla rápida',
-          text: 'Pedí siempre: precio de contado (con descuento) y precio total en cuotas. Si el contado es más barato, las cuotas tienen costo. Si son iguales, igual puede haber costo de oportunidad (esa plata podría ir al colchón o a cancelar deuda cara).',
-        },
-        {
-          heading: 'Cuándo las cuotas sí pueden servir',
-          text: 'Si el precio de contado y el de cuotas es el mismo (verdadero 0%), no te descapitalizan, y no tenés deuda de tarjeta cara pendiente. Evitá cuotas si ya vas a mínimo en la tarjeta: estás mezclando dos deudas.',
-        },
-        {
-          heading: 'Calculalo, no lo intuyas',
-          text: 'Usá “¿Cuotas o pagar de contado?”. Cargá lista, descuento, cantidad de cuotas e interés por cuota si lo hubiera. El resultado te dice quién gana en plata — no en marketing.',
-        },
-      ],
-      actions: [
-        'Antes de comprar, pedí precio contado vs. total financiado.',
-        'Corré la calculadora de cuotas vs. contado.',
-        'Si la diferencia es chica pero tenés deuda cara, priorizá salir de la deuda.',
-      ],
-      quiz: {
-        question: 'Lista $200.000 en 12 cuotas; contado 15% off. ¿Qué implica?',
-        options: [
-          'Las cuotas son gratis porque dicen “sin interés”',
-          'Financiar cuesta la diferencia respecto del contado',
-          'Siempre conviene el máximo de cuotas',
-        ],
-        correct: 1,
-        explanation:
-          'El cartel “sin interés” no borra el descuento de contado perdido: esa diferencia es el costo de financiar.',
-      },
-    },
-  },
-  {
-    id: 6,
-    icon: 'shield',
-    title: 'Colchón de emergencia',
-    subtitle: 'Antes de “invertir”',
-    urgency: 'Si un imprevisto te manda a la tarjeta',
-    content: {
-      intro:
-        'El fondo de emergencia es aburrido y te salva. Sin él, cada arreglo de auto o falta de laburo termina en la tasa más cara del sistema: la tarjeta.',
-      caseStudy: {
-        title: 'Caso: Sofía y el dental de urgencia',
-        text: 'Sin colchón, Sofía financió $180.000 en la tarjeta. En seis meses pagó mucho más. Si hubiera tenido 2–3 meses de gastos en un lugar líquido, el mismo golpe no le generaba deuda cara.',
-      },
-      sections: [
-        {
-          heading: '¿Cuánto y dónde?',
-          text: 'Meta realista: 3 meses de gastos fijos (ideal 6). Tiene que ser líquido: cuenta remunerada, FCI money market, o instrumentos de corto plazo que puedas rescatar rápido. Rendimiento alto con trabas no sirve para emergencias.',
-        },
-        {
-          heading: 'Cómo armarlo sin heroísmo',
-          text: 'Automatizá un transfer el día de cobro — aunque sea chico. Subí el monto cuando canceles una cuota. No lo mezcles con “inversión” de largo plazo ni con el sueldo de la semana.',
-        },
-        {
-          heading: 'Orden sugerido',
-          text: '1) Presupuesto. 2) Frenar deuda cara. 3) Colchón mínimo. 4) Recién ahí pensar inversiones de mayor riesgo. Invertir con la tarjeta al rojo es ruleta.',
-        },
-      ],
-      actions: [
-        'Calculá 3 × tus gastos fijos mensuales.',
-        'Abrí o elegí una cuenta/FCI líquido para el colchón.',
-        'Programá un monto automático el día de cobro.',
       ],
       quiz: {
         question: '¿Qué prioridad tiene el fondo de emergencia?',
         options: [
           'Que rinda lo máximo posible',
           'Que sea accesible rápido cuando hace falta',
-          'Que esté todo en un solo plazo fijo a 1 año',
+          'Dejarlo todo a un año sin poder tocarlo',
         ],
         correct: 1,
         explanation:
@@ -322,146 +162,370 @@ export const EDUCATION_MODULES: EducationModule[] = [
     },
   },
   {
-    id: 7,
-    icon: 'megaphone',
-    title: 'Compromisos a largo plazo',
-    subtitle: 'Planes y letras chicas',
-    urgency: 'Si te ofrecen plan de ahorro, suscripción o crédito largo',
+    id: 3,
+    icon: 'credit-card',
+    title: 'Deuda, crédito e historial',
+    subtitle: 'Pagar sin ahogarte',
+    urgency: 'Si venís refinanciando o pagando el mínimo',
     content: {
       intro:
-        'Lo que firmás hoy te puede atar años. En Argentina, los planes de ahorro automotor son uno de los conflictos más denunciados por consumidores: cuotas que se disparan, falta de transparencia y reglas difíciles de salir.',
+        'El crédito puede ser herramienta o trampa. La clave es sostenibilidad: cuánto del ingreso se va en deudas, qué tasa pagás y qué dice tu historial.',
       caseStudy: {
-        title: 'Caso: el “ahorro” que no era ahorro',
-        text: 'Te venden un plan como “forma de ahorrar para el 0km”. Con el tiempo la cuota se actualiza, los gastos administrativos pesan y cancelar sale caro o imposible en la práctica. No es un plazo fijo: es un contrato complejo.',
+        title: 'Caso: Martín y el mínimo',
+        text: 'Debe en la tarjeta y paga solo el mínimo. El interés del mes supera lo que abona: la deuda crece “estando al día”. Con la calculadora y el CFT de una refinanciación entiende el costo real.',
       },
       sections: [
         {
-          heading: 'Preguntas antes de firmar cualquier plan',
-          text: '¿Cuál es el CFT o el costo total estimado? ¿Qué pasa si dejo de pagar? ¿Puedo transferir o cancelar? ¿Quién fija las actualizaciones? ¿Hay seguros obligatorios? Si no hay respuesta clara por escrito, no firmes.',
+          heading: 'Regla prudencial orientativa',
+          text: 'Como guía general de educación financiera, conviene que el endeudamiento no se coma una porción excesiva del ingreso (en materiales oficiales suele mencionarse un umbral prudencial cercano al 40% de los ingresos mensuales). Si estás arriba, priorizá bajar deuda cara antes de nuevas cuotas.',
         },
         {
-          heading: 'Planes de ahorro automotor',
-          text: 'UCU lleva una campaña nacional porque miles de ahorristas denuncian abusos del sistema. Si estás en un plan o te lo ofrecen, informate en la campaña antes de seguir metiendo plata.',
+          heading: 'Leer el resumen: TNA, TEA, CFT y mínimo',
+          text: 'Buscá saldo, pago mínimo, tasas de financiación y —si figura— CFT. El mínimo no es “estar bien”: es el piso que acepta el emisor. Usá la calculadora de pago mínimo con tu tasa (mensual o TNA del resumen).',
         },
         {
-          heading: 'Otras trampas de largo plazo',
-          text: 'Suscripciones que se renuevan solas, créditos con cuota “teaser”, seguros bundlados en la tarjeta. Pedí siempre el costo de salida y el medio de baja.',
+          heading: 'Historial y Central de Deudores',
+          text: 'Conocer tu situación crediticia ayuda a negociar y a detectar errores. El BCRA publica información de la Central de Deudores y canales para consultar/rectificar. Si hay consumos desconocidos, impugnálos y guardá el reclamo.',
         },
       ],
       actions: [
-        'No firmes de apuro: pedí el contrato y leélo en casa.',
-        'Si ya estás en un plan de ahorro, revisá la campaña y recursos de UCU.',
-        'Guardá mails, vouchers y comprobantes de pago.',
+        'Sumá cuotas del mes y comparalas con tu ingreso (¿cuánto % te comen?).',
+        'Simulá “¿Qué pasa si pago el mínimo?” con tu resumen.',
+        'Completá la plantilla de plan de deuda.',
+      ],
+      resources: [
+        {
+          label: 'Central de Deudores (BCRA)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Situacion_Crediticia.asp',
+          source: 'BCRA',
+        },
+        {
+          label: 'Protección al usuario de servicios financieros',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Usuarios_Financieros.asp',
+          source: 'BCRA',
+        },
       ],
       quiz: {
-        question: 'Te ofrecen un plan de ahorro para un auto. ¿Qué es lo más sensato?',
+        question: 'El pago mínimo es menor que el interés del mes. ¿Qué conviene?',
         options: [
-          'Firmar ya para “no perder la promo”',
-          'Pedir contrato, costos de salida y asesorarte antes',
-          'Pagar el mínimo de la tarjeta para cubrir la cuota',
+          'Seguir así: al menos pago algo',
+          'Pagar más que los intereses (ideal: el total) y frenar compras nuevas',
+          'Sacar otra tarjeta para pagar esta',
         ],
         correct: 1,
         explanation:
-          'Las urgencias comerciales son del vendedor. Vos necesitás el contrato y el costo de salir antes de comprometer años de ingreso.',
+          'Si el mínimo no cubre intereses, la deuda crece. Otra tarjeta suele repetir la misma trampa.',
       },
       cta: {
-        label: 'Ver campaña planes de ahorro',
-        href: '/planes-de-ahorro-son-una-trampa',
+        label: 'Abrir calculadora de pago mínimo',
+        href: '#calculadoras-pago-minimo',
+      },
+    },
+  },
+  {
+    id: 4,
+    icon: 'wallet',
+    title: 'Cuentas y medios de pago',
+    subtitle: 'Elegir y operar seguro',
+    urgency: 'Si mezclás banco, billetera y no sabés costos',
+    content: {
+      intro:
+        'Caja de ahorro, cuenta de pago, débito, crédito, CVU/CBU/Alias y billeteras: la meta es elegir con información y operar sin regalar claves.',
+      caseStudy: {
+        title: 'Caso: elegir entre banco y billetera',
+        text: 'Ana cobra el sueldo en un banco con costos poco claros y usa una billetera para transferencias. Arma una ficha: comisiones, límites, atención al usuario y cómo cerrar la cuenta. Recién ahí decide dónde dejar el sueldo y el colchón.',
+      },
+      sections: [
+        {
+          heading: 'Cuenta bancaria vs. cuenta de pago',
+          text: 'Ambas permiten recibir y enviar dinero, pero cambian costos, protección, red de extracción y reglas. Compará con datos del BCRA (comisiones) y leé el contrato antes de “aceptar todo”.',
+        },
+        {
+          heading: 'CBU, CVU y Alias',
+          text: 'Identifican tu cuenta para acreditar. El Alias facilita transferencias; no lo compartas en formularios dudosos. Verificá siempre el destinatario antes de confirmar.',
+        },
+        {
+          heading: 'Seguridad básica',
+          text: 'Ni el banco ni un organismo te piden clave, token ni datos por WhatsApp/mail. Homebanking y apps: enlaces oficiales, no los del mensaje urgente.',
+        },
+      ],
+      actions: [
+        'Anotá qué cuentas/billeteras usás y para qué.',
+        'Revisá comisiones en el comparador del BCRA.',
+        'Activá alertas de movimiento en tu app.',
+      ],
+      resources: [
+        {
+          label: 'Comparador de comisiones bancarias (BCRA)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Comparador_de_Comisiones.asp',
+          source: 'BCRA',
+        },
+        {
+          label: 'Usuarios financieros BCRA',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Usuarios_Financieros.asp',
+          source: 'BCRA',
+        },
+      ],
+      quiz: {
+        question: 'Te llega un WhatsApp “del banco” pidiendo tu clave por un supuesto bloqueo. ¿Qué hacés?',
+        options: [
+          'La paso para desbloquear rápido',
+          'No la paso: ingreso solo por la app/web oficial y denuncio si hace falta',
+          'La paso pero cambio la clave después',
+        ],
+        correct: 1,
+        explanation:
+          'Bancos y organismos no piden claves por mensajería. Es una señal clásica de fraude.',
+      },
+    },
+  },
+  {
+    id: 5,
+    icon: 'trending-up',
+    title: 'Inversiones básicas',
+    subtitle: 'Riesgo y protección',
+    urgency: 'Si te prometen renta alta “sin riesgo”',
+    content: {
+      intro:
+        'Invertir no es un atajo mágico. A mayor rentabilidad esperada, mayor riesgo. Lo regulado y lo no regulado no son lo mismo: la CNV es la brújula del inversor.',
+      caseStudy: {
+        title: 'Caso: la promesa del 10% semanal',
+        text: 'Un “finfluencer” ofrece plataforma “garantizada”. No figura como agente autorizado. La regla: si suena imposible, es sospechosa. Consultá alertas CNV antes de transferir.',
+      },
+      sections: [
+        {
+          heading: 'Ahorro vs. inversión',
+          text: 'Primero colchón y deudas caras. Después, instrumentos acordes a tu plazo y tolerancia al riesgo: plazo fijo, FCI, etc. Nadie puede garantizar alta renta sin riesgo.',
+        },
+        {
+          heading: 'Herramientas oficiales',
+          text: 'Compará tasas de plazo fijo en el BCRA. Para entender derechos y fraudes, usá la Guía de Protección al Inversor y alertas de la CNV.',
+        },
+        {
+          heading: 'Señales de alerta',
+          text: 'Presión para depositar ya, referidos, “oportunidad única”, apps no autorizadas, contratos confusos. Preferí canales regulados y preguntá antes de firmar.',
+        },
+      ],
+      actions: [
+        'Corré la calculadora de tasa real con un ejemplo tuyo.',
+        'Leé un resumen de la guía CNV de protección al inversor.',
+        'Anotá 3 señales de oferta sospechosa.',
+      ],
+      resources: [
+        {
+          label: 'CNV — Protección al público inversor',
+          href: 'https://www.argentina.gob.ar/cnv',
+          source: 'CNV',
+        },
+        {
+          label: 'Comparador de tasas de plazo fijo (BCRA)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Comparador_de_tasas.asp',
+          source: 'BCRA',
+        },
+      ],
+      quiz: {
+        question: '¿Qué principio ayuda a evaluar una inversión?',
+        options: [
+          'Alta renta prometida = siempre conviene',
+          'A mayor rentabilidad esperada, mayor riesgo',
+          'Si lo recomienda un influencer, está regulado',
+        ],
+        correct: 1,
+        explanation:
+          'Rentabilidad y riesgo van juntos. Las promesas “seguras y altísimas” son una bandera roja.',
+      },
+    },
+  },
+  {
+    id: 6,
+    icon: 'receipt',
+    title: 'Impuestos y comprobantes',
+    subtitle: 'Leer el ticket',
+    urgency: 'Si no entendés IVA ni monotributo básico',
+    content: {
+      intro:
+        'No hace falta ser contador: sí saber leer un ticket, qué es consumidor final y cuándo una changa puede requerir monotributo. ARCA concentra guías y simuladores oficiales.',
+      caseStudy: {
+        title: 'Caso: el precio “sin impuestos”',
+        text: 'En el local el precio “de góndola” no coincide con lo que entiende Paula sobre impuestos. Con transparencia fiscal en el comprobante puede ver el desglose de IVA y otros tributos nacionales indirectos.',
+      },
+      sections: [
+        {
+          heading: 'Factura, ticket y transparencia fiscal',
+          text: 'Pedí comprobante. En muchos casos el ticket detalla IVA y otros impuestos. Eso ayuda a entender el precio final y a reclamar si no te dan documentación.',
+        },
+        {
+          heading: 'Consumidor final',
+          text: 'Cuando comprás para uso personal, operás como consumidor final. Guardá tickets de compras relevantes (garantía, reclamos, deducciones si correspondiera).',
+        },
+        {
+          heading: 'Monotributo (noción básica)',
+          text: 'Si tenés actividad independiente o secundaria, puede aplicar monotributo. Usá el simulador y las guías de ARCA; para tu caso puntual, consultá un profesional.',
+        },
+      ],
+      actions: [
+        'Revisá un ticket reciente y ubicá IVA / totales.',
+        'Explorá una guía paso a paso de ARCA (clave fiscal o facturación).',
+        'Si tienes changas regulares, mirá el simulador de monotributo (opcional).',
+      ],
+      resources: [
+        {
+          label: 'ARCA (ex AFIP) — sitio oficial',
+          href: 'https://www.afip.gob.ar/',
+          source: 'ARCA',
+        },
+        {
+          label: 'Argentina.gob.ar — trámites y guías',
+          href: 'https://www.argentina.gob.ar/',
+          source: 'Estado nacional',
+        },
+      ],
+      quiz: {
+        question: '¿Para qué sirve mirar el desglose de impuestos en un comprobante?',
+        options: [
+          'Para no pagar nunca IVA',
+          'Para entender el precio final y tener respaldo ante un reclamo',
+          'Solo le importa a las empresas',
+        ],
+        correct: 1,
+        explanation:
+          'El comprobante es información y prueba. Entender el desglose mejora decisiones y reclamos.',
+      },
+    },
+  },
+  {
+    id: 7,
+    icon: 'percent',
+    title: 'Cómo se calculan los intereses',
+    subtitle: 'TNA, TEA y CFT en criollo',
+    urgency: 'Si firmás cuotas sin saber qué tasa estás pagando',
+    content: {
+      intro:
+        'Mucha gente se endeuda “sin ton ni son”: mira la cuota, no el costo. Si no sabés convertir TNA a mensual ni qué es el CFT, el banco decide por vos. Este módulo es para leer números antes de firmar.',
+      caseStudy: {
+        title: 'Caso: “son solo $40.000 por mes”',
+        text: 'Diego acepta un préstamo porque la cuota “le entra”. No pregunta TNA ni CFT. A los meses suma lo pagado y descubre que el capital apenas bajó: casi todo fue interés y gastos. Recién ahí entiende que la cuota linda no es el precio.',
+      },
+      sections: [
+        {
+          heading: 'Cuota ≠ costo',
+          text: 'La cuota te dice cuánto sale del bolsillo cada mes. El costo te lo dicen la tasa y el CFT: cuánto terminás pagando de más por usar plata prestada. Nunca compares solo cuotas entre dos créditos: compará CFT (o, si no está, TNA/TEA + gastos).',
+        },
+        {
+          heading: 'De anual a mensual (regla práctica)',
+          text: 'Si el resumen o el contrato muestran TNA (anual), una aproximación educativa es dividir por 12 para tener un % mensual orientativo. Ejemplo: TNA 120% ≈ 10% mensual. No es la fórmula bancaria exacta de todos los productos, pero te ordena la cabeza antes de firmar. En la calculadora de pago mínimo podés cargar tasa mensual o anual (TNA).',
+        },
+        {
+          heading: 'TNA, TEA y CFT — para qué sirve cada una',
+          text: 'TNA: tasa nominal anual (la “cara” del aviso). TEA: efectiva anual (suele ser más alta; incluye capitalización). CFT: costo financiero total (intereses + seguros + comisiones). Si te ofrecen refinanciar, pedí el CFT por escrito. Si solo te muestran la cuota, pedí el resto.',
+        },
+        {
+          heading: 'Intereses compensatorios y punitorios',
+          text: 'Compensatorios: lo que cobrás por financiar el saldo. Punitorios: castigo por mora. En tarjeta, mirá ambos en el resumen. Si solo pagás el mínimo, los compensatorios pueden comerse tu pago y la deuda no baja.',
+        },
+      ],
+      actions: [
+        'Agarrá un resumen o un contrato y marcá TNA / TEA / CFT (lo que figure).',
+        'Convertí la TNA a un % mensual aproximado (÷ 12) y anotalo.',
+        'Simulá tu saldo en la calculadora de pago mínimo con esa tasa.',
+      ],
+      resources: [
+        {
+          label: 'Usuarios financieros BCRA',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Usuarios_Financieros.asp',
+          source: 'BCRA',
+        },
+        {
+          label: 'Comparador de tasas de plazo fijo (para contrastar “qué es una tasa”)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Comparador_de_tasas.asp',
+          source: 'BCRA',
+        },
+      ],
+      quiz: {
+        question: 'Te muestran solo la cuota de un préstamo. ¿Qué pedís antes de firmar?',
+        options: [
+          'Nada: si la cuota entra, está bien',
+          'TNA/TEA y, sobre todo, el CFT (costo total)',
+          'Solo la cantidad de cuotas',
+        ],
+        correct: 1,
+        explanation:
+          'Sin tasa y CFT estás comprando a ciegas. La cuota es el ritmo de pago, no el precio del crédito.',
+      },
+      cta: {
+        label: 'Probar calculadora de pago mínimo / intereses',
+        href: '#calculadoras-pago-minimo',
       },
     },
   },
   {
     id: 8,
-    icon: 'scale',
-    title: 'Tus derechos (y cuándo reclamar)',
-    subtitle: 'De educación a acción',
-    urgency: 'Si una empresa te está perjudicando',
+    icon: 'alert',
+    title: 'Salir del sobreendeudamiento',
+    subtitle: 'Frenar la bola de nieve',
+    urgency: 'Si las deudas te pasan el sueldo y no sabés por dónde empezar',
     content: {
       intro:
-        'Educación financiera sin derechos es mitad de la historia. Como consumidor en Argentina tenés herramientas: información clara, trato digno, y vías de reclamo cuando hay abuso.',
+        'Endeudarse sin calcular tasas es el problema; el siguiente es ordenar la salida. Acá no hablamos de “tips motivacionales”: hablamos de cortar sangrado, priorizar intereses caros y armar un plan con números.',
       caseStudy: {
-        title: 'Caso: un seguro que nadie pidió',
-        text: 'Aparece un cargo mensual en la tarjeta. El banco dice “está en los términos”. Pedís baja y no responden. Con el resumen, el reclamo por escrito y respaldo de una organización de consumidores, el caso avanza: sin evidencia, se diluye.',
+        title: 'Caso: tres deudas y cero plan',
+        text: 'Carla tiene tarjeta al mínimo, un personal y cuotas del súper. Paga “lo que puede” sin mirar tasas. Cuando lista saldos, CFT y cuotas, ve que la tarjeta se come el margen. Congela compras, paga más que el interés de la tarjeta y recién después ataca el resto.',
       },
       sections: [
         {
-          heading: 'Derechos básicos (versión cocina)',
-          text: 'Derecho a información clara y veraz; a no ser engañado con publicidad engañosa; a un trato digno; a reclamar y obtener respuesta. El precio y las condiciones tienen que poder entenderse antes de pagar.',
+          heading: 'Señales de que estás sobreendeudado',
+          text: 'Usás una deuda para pagar otra; el mínimo es tu techo; no sabés el CFT de lo que debés; más del ~40% del ingreso se va en cuotas; pedís adelantos o “préstamos rápidos” para llegar. Si te suena familiar, el plan empieza hoy — no el mes que viene.',
         },
         {
-          heading: 'Armá el legajo antes de pelear',
-          text: 'Resúmenes, capturas, contratos, mails, número de reclamo interno de la empresa, fechas. Sin papeles, es tu palabra contra un call center eterno.',
+          heading: 'Orden de ataque (con tasas, no con intuición)',
+          text: '1) Listá cada deuda: saldo, tasa/CFT, cuota, mínimo. 2) Cortá el grifo: nada de compras nuevas en la más cara. 3) Pagá siempre más que los intereses de la deuda más cara (o el total si podés). 4) Avalancha (mayor tasa primero) o bola de nieve (más chica primero). Usá la plantilla de deudas del curso.',
         },
         {
-          heading: 'UCU está para eso',
-          text: 'Si el banco, el comercio, la prepaga o la administradora no resuelve, podés iniciar un reclamo con Usuarios Protegidos y hacer seguimiento online. La educación termina en acción.',
+          heading: 'Trampa de “soluciones” que empeoran',
+          text: 'Sacar otra tarjeta para pagar esta; refinanciar sin mirar el CFT nuevo; créditos “en 15 minutos” a tasas brutales; planes eternos que bajan la cuota y alargan el dolor. Si te ofrecen alivio, pedí números: total a pagar y CFT.',
+        },
+        {
+          heading: 'Cuando el problema ya es abuso o no te dejan salir',
+          text: 'Si hay cargos que no reconocés, refinanciación forzada o te niegan información de deuda/tasas, pedí todo por escrito y pedí ayuda: protección al usuario financiero (BCRA) y reclamo en UCU. El foco sigue siendo tu plata y tus tasas — no un trámite genérico.',
         },
       ],
       actions: [
-        'Identificá el problema en una frase y juntá comprobantes.',
-        'Hacé el reclamo interno a la empresa y pedí número de gestión.',
-        'Si no hay respuesta útil, iniciá el reclamo en UCU.',
+        'Completá la plantilla de plan de deudas con saldos y tasas.',
+        'Elegí la deuda más cara y fijá un pago > intereses este mes.',
+        'Corré las calculadoras de pago mínimo y de capacidad de ahorro con tus números.',
+      ],
+      resources: [
+        {
+          label: 'Central de Deudores (BCRA)',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Situacion_Crediticia.asp',
+          source: 'BCRA',
+        },
+        {
+          label: 'Usuarios financieros BCRA',
+          href: 'https://www.bcra.gob.ar/BCRAyVos/Usuarios_Financieros.asp',
+          source: 'BCRA',
+        },
+        {
+          label: 'Reclamos UCU (cobros / créditos abusivos)',
+          href: '/reclamos',
+          source: 'UCU',
+        },
       ],
       quiz: {
-        question: 'Te cobraron un servicio que no contrataste. ¿Qué orden conviene?',
+        question: 'Tenés varias deudas y poco margen. ¿Qué es lo más sensato primero?',
         options: [
-          'Ignorarlo un par de meses',
-          'Juntar pruebas, reclamar a la empresa y, si hace falta, a UCU',
-          'Sacar un préstamo para “taparlo”',
+          'Sacar un préstamo nuevo para “unificar” sin mirar el CFT',
+          'Listar tasas/CFT, cortar compras en la más cara y pagar más que sus intereses',
+          'Pagar solo mínimos en todas “para estar al día”',
         ],
         correct: 1,
         explanation:
-          'Primero evidencia y reclamo formal. Taparlo con más deuda o dejar pasar el tiempo suele empeorar el caso.',
+          'Sin listar tasas seguís a ciegas. Los mínimos en deudas caras suelen ser la forma más lenta y cara de “estar al día”.',
       },
       cta: {
-        label: 'Iniciar o consultar un reclamo',
-        href: '/reclamos',
+        label: 'Ir a calculadoras (pago mínimo y ahorro)',
+        href: '#calculadoras-pago-minimo',
       },
     },
   },
 ];
-
-export const GLOSSARY = [
-  {
-    term: 'TNA',
-    definition: 'Tasa Nominal Anual. Es la tasa de interés anunciada por año, sin capitalizar.',
-  },
-  {
-    term: 'TEA',
-    definition: 'Tasa Efectiva Anual. Incluye el efecto de la capitalización; suele ser más alta que la TNA.',
-  },
-  {
-    term: 'CFT',
-    definition:
-      'Costo Financiero Total. Lo que realmente te cuesta un crédito: intereses, seguros, gastos y comisiones.',
-  },
-  {
-    term: 'UVA',
-    definition:
-      'Unidad de Valor Adquisitivo. Se actualiza con la inflación (CER). Usada en plazos fijos e hipotecarios.',
-  },
-  {
-    term: 'CER',
-    definition: 'Coeficiente de Estabilización de Referencia. Indexa instrumentos a la inflación oficial.',
-  },
-  {
-    term: 'Cedear',
-    definition:
-      'Certificado de Depósito Argentino. Representa acciones del exterior y se opera en pesos en el mercado local.',
-  },
-  {
-    term: 'FCI',
-    definition:
-      'Fondo Común de Inversión. Pool de plata administrado; hay de bajo riesgo (money market) y de mayor riesgo.',
-  },
-  {
-    term: 'Pago mínimo',
-    definition:
-      'El monto más bajo que acepta la tarjeta. El resto genera intereses muy altos. Conviene pagar el total.',
-  },
-  {
-    term: 'Refinanciación',
-    definition:
-      'Pasar el saldo a un plan de cuotas. Pedí siempre el CFT: a veces “alivia” el mes y encarece el total.',
-  },
-] as const;
