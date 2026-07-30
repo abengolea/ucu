@@ -92,48 +92,91 @@ export async function getReclamoRubrosFromFirestore(): Promise<ReclamoRubro[]> {
   return readCatalog<ReclamoRubro>(CATALOG_COLLECTIONS.rubros);
 }
 
+const EMPRESAS_CACHE_TTL_MS = 5 * 60 * 1000;
+let empresasCatalogCache: { loadedAt: number; items: ReclamoEmpresa[] } | null = null;
+
+function normalizeEmpresaSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function collapseEmpresaAlnum(value: string): string {
+  return value.replace(/[^a-z0-9]/g, '');
+}
+
+async function loadEmpresasCatalogCached(): Promise<ReclamoEmpresa[]> {
+  const now = Date.now();
+  if (empresasCatalogCache && now - empresasCatalogCache.loadedAt < EMPRESAS_CACHE_TTL_MS) {
+    return empresasCatalogCache.items;
+  }
+  const items = await readCatalog<ReclamoEmpresa>(CATALOG_COLLECTIONS.empresas);
+  empresasCatalogCache = { loadedAt: now, items };
+  return items;
+}
+
+/** Score > 0 when every query token appears somewhere in the name (any order). */
+function scoreEmpresaMatch(empresa: ReclamoEmpresa, query: string, tokens: string[]): number {
+  const name = normalizeEmpresaSearchText(empresa.nombreSearch || empresa.nombre || '');
+  if (!name) return 0;
+
+  const cuitDigits = (empresa.cuit ?? '').replace(/\D/g, '');
+  const queryDigits = query.replace(/\D/g, '');
+  if (queryDigits.length >= 2 && cuitDigits.includes(queryDigits)) {
+    return cuitDigits.startsWith(queryDigits) ? 95 : 75;
+  }
+
+  const collapsedName = collapseEmpresaAlnum(name);
+  const collapsedQuery = collapseEmpresaAlnum(query);
+  const tokensMatch = tokens.length > 0 && tokens.every((token) => name.includes(token));
+  const collapsedMatch =
+    collapsedQuery.length >= 2 && collapsedName.includes(collapsedQuery);
+
+  if (!tokensMatch && !collapsedMatch) return 0;
+
+  if (name === query) return 100;
+  if (name.startsWith(query)) return 90;
+  if (name.includes(query)) return 70;
+  if (collapsedMatch && collapsedName.startsWith(collapsedQuery)) return 65;
+  if (collapsedMatch) return 55;
+  return 40;
+}
+
 export async function searchReclamoEmpresasFromFirestore(
   query: string,
   limit = 30
 ): Promise<ReclamoEmpresa[]> {
-  const normalized = query.trim().toLowerCase();
-  const db = dbOrThrow();
+  const normalized = normalizeEmpresaSearchText(query);
+  const catalog = await loadEmpresasCatalogCached();
 
   if (!normalized) {
-    const snap = await db
-      .collection(CATALOG_COLLECTIONS.empresas)
-      .orderBy('nombreSearch')
-      .limit(limit)
-      .get();
-    return snap.docs.map((doc) => doc.data() as ReclamoEmpresa);
+    return [...catalog]
+      .sort((a, b) =>
+        (a.nombreSearch || a.nombre).localeCompare(b.nombreSearch || b.nombre, 'es')
+      )
+      .slice(0, limit);
   }
 
-  const byName = await db
-    .collection(CATALOG_COLLECTIONS.empresas)
-    .orderBy('nombreSearch')
-    .startAt(normalized)
-    .endAt(`${normalized}\uf8ff`)
-    .limit(limit)
-    .get();
+  const tokens = normalized.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
 
-  let results = byName.docs.map((doc) => doc.data() as ReclamoEmpresa);
+  const scored = catalog
+    .map((empresa) => ({
+      empresa,
+      score: scoreEmpresaMatch(empresa, normalized, tokens),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (a.empresa.nombreSearch || a.empresa.nombre).localeCompare(
+        b.empresa.nombreSearch || b.empresa.nombre,
+        'es'
+      );
+    });
 
-  if (results.length < limit && /^\d/.test(normalized)) {
-    const byCuit = await db
-      .collection(CATALOG_COLLECTIONS.empresas)
-      .orderBy('cuit')
-      .startAt(normalized)
-      .endAt(`${normalized}\uf8ff`)
-      .limit(limit - results.length)
-      .get();
-    const seen = new Set(results.map((item) => item.id));
-    for (const doc of byCuit.docs) {
-      const item = doc.data() as ReclamoEmpresa;
-      if (!seen.has(item.id)) results.push(item);
-    }
-  }
-
-  return results.slice(0, limit);
+  return scored.slice(0, limit).map((item) => item.empresa);
 }
 
 export async function getReclamoEmpresasByIds(ids: number[]): Promise<ReclamoEmpresa[]> {
