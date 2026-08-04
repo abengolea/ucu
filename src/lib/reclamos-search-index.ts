@@ -210,8 +210,20 @@ function matchesEmpresaQuery(empresaSearch: string, query: string): boolean {
   const collapsedQuery = collapseAlnum(normalized);
   if (collapsedQuery.length >= 3 && collapsedSearch.includes(collapsedQuery)) return true;
 
-  const tokens = empresaSearch.split(/[^a-z0-9]+/).filter(Boolean);
-  return tokens.some((token) => tokenMatchesEmpresa(token, normalized));
+  const queryTokens = normalized.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
+  const empresaTokens = empresaSearch.split(/[^a-z0-9]+/).filter(Boolean);
+
+  // Todas las palabras del filtro deben aparecer en el nombre, en cualquier orden.
+  if (queryTokens.length > 0) {
+    const allTokensMatch = queryTokens.every(
+      (qt) =>
+        empresaSearch.includes(qt) ||
+        empresaTokens.some((token) => tokenMatchesEmpresa(token, qt))
+    );
+    if (allTokensMatch) return true;
+  }
+
+  return empresaTokens.some((token) => tokenMatchesEmpresa(token, normalized));
 }
 
 function matchesEmpresaFilter(doc: ReclamoSearchIndexDoc, filters: ReclamoSearchFilters): boolean {

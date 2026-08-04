@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminPermission } from '@/lib/admin-session';
-import { parseReclamoSearchInstruction } from '@/lib/gemini';
+import { getGeminiApiKey, parseReclamoSearchInstruction } from '@/lib/gemini';
 import {
   getSearchIndexMeta,
   mergeParsedFilters,
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       indexedAt: meta?.indexedAt ?? null,
       count: meta?.count ?? 0,
-      geminiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()),
+      geminiConfigured: Boolean(getGeminiApiKey()),
     });
   } catch (error) {
     console.error(error);
@@ -80,6 +80,15 @@ export async function POST(request: NextRequest) {
     let interpretacion = 'Búsqueda con filtros manuales';
 
     if (instruction) {
+      if (!getGeminiApiKey()) {
+        return NextResponse.json(
+          {
+            error:
+              'La instrucción con IA no está disponible: falta el secreto GEMINI_API_KEY en el servidor. Podés buscar solo con el filtro de empresa.',
+          },
+          { status: 503 }
+        );
+      }
       const parsed = await parseReclamoSearchInstruction(instruction);
       interpretacion = parsed.interpretacion;
       filters = await mergeParsedFilters(parsed.filters, manual);

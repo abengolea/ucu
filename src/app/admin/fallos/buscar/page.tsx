@@ -112,13 +112,11 @@ export default function BuscarFallosPage() {
               ? ` · actualizado ${format(new Date(meta.indexedAt), "d MMM yyyy HH:mm", { locale: es })}`
               : ' · sin indexar'}
           </span>
-          <span
-            className={`rounded-full px-3 py-1 font-medium ${
-              meta.geminiConfigured ? 'bg-sky-100 text-sky-800' : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {meta.geminiConfigured ? 'Gemini configurado' : 'Falta GEMINI_API_KEY en el servidor'}
-          </span>
+          {meta.geminiConfigured ? (
+            <span className="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-800">
+              Gemini configurado
+            </span>
+          ) : null}
         </div>
       )}
 
@@ -194,7 +192,14 @@ export default function BuscarFallosPage() {
 
         <button
           type="submit"
-          disabled={searching || !meta?.geminiConfigured}
+          disabled={
+            searching ||
+            (!empresaQuery.trim() && !actorQuery.trim() && !instruction.trim()) ||
+            (Boolean(instruction.trim()) &&
+              !empresaQuery.trim() &&
+              !actorQuery.trim() &&
+              !meta?.geminiConfigured)
+          }
           className="inline-flex items-center gap-2 rounded-lg bg-[#1a5fb4] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#004a80] disabled:opacity-60"
         >
           {searching ? (

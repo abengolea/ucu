@@ -231,7 +231,15 @@ function matchesTopicSearch(doc: FalloSearchIndexDoc, filters: FalloSearchFilter
 function matchesNameQuery(fieldSearch: string, query?: string): boolean {
   const normalized = normalizeSearchText(query ?? '');
   if (!normalized) return true;
-  return keywordVariants(normalized).some((variant) => fieldSearch.includes(variant));
+  if (keywordVariants(normalized).some((variant) => fieldSearch.includes(variant))) return true;
+
+  const tokens = normalized.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
+  if (tokens.length < 2) return false;
+
+  // Todas las palabras deben aparecer en el nombre, en cualquier orden.
+  return tokens.every((token) =>
+    keywordVariants(token).some((variant) => fieldSearch.includes(variant))
+  );
 }
 
 function matchesDateRange(fechaSort: string, dateFrom?: string, dateTo?: string): boolean {
