@@ -38,12 +38,19 @@
     "sync:reclamos:sample": "node scripts/sync-reclamos-from-sql.mjs --enrich-only --limit=10",
     "build:reclamos-index": "node scripts/build-reclamos-search-index.mjs",
     "build:reclamos-index:dry": "node scripts/build-reclamos-search-index.mjs --dry-run",
+    "asignar:otras-empresas": "node scripts/asignar-otras-empresas.mjs",
+    "asignar:otras-empresas:apply": "node scripts/asignar-otras-empresas.mjs --apply",
     "build:fallos-index": "node scripts/build-fallos-search-index.mjs",
     "build:fallos-index:dry": "node scripts/build-fallos-search-index.mjs --dry-run",
     "fix:observatorio-encoding": "node scripts/fix-observatorio-encoding.mjs",
     "fix:observatorio-encoding:dry": "node scripts/fix-observatorio-encoding.mjs --dry-run",
     "import:delegados": "node scripts/import-delegados-from-sql.mjs",
-    "import:delegados:dry": "node scripts/import-delegados-from-sql.mjs --dry-run"
+    "import:delegados:dry": "node scripts/import-delegados-from-sql.mjs --dry-run",
+    "import:drive-reclamos": "node scripts/import-reclamos-from-drive.mjs",
+    "import:drive-reclamos:dry": "node scripts/import-reclamos-from-drive.mjs --dry-run",
+    "import:drive-reclamos:sample": "node scripts/import-reclamos-from-drive.mjs --dry-run --limit=5",
+    "test:mp-pago-10": "node scripts/test-mp-pago-10.mjs",
+    "preview:informe-pdf": "npx tsx scripts/preview-informe-pdf.ts"
   },
   "dependencies": {
     "autoprefixer": "^10.4.20",
@@ -52,7 +59,9 @@
     "firebase": "^11.9.1",
     "firebase-admin": "^12.2.0",
     "lucide-react": "^0.475.0",
+    "mercadopago": "^3.3.0",
     "next": "15.5.7",
+    "pdfkit": "^0.19.1",
     "postcss": "^8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -64,10 +73,12 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "dotenv": "^16.5.0",
     "fast-xml-parser": "^5.2.5",
+    "mammoth": "^1.12.0",
     "mssql": "^12.7.0"
   }
 }

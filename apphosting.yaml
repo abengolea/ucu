@@ -125,3 +125,18 @@ env:
     secret: RESEND_WEBHOOK_SECRET
     availability:
       - RUNTIME
+
+  - variable: MERCADOPAGO_ACCESS_TOKEN
+    secret: MERCADOPAGO_ACCESS_TOKEN
+    availability:
+      - RUNTIME
+
+  - variable: MERCADOPAGO_WEBHOOK_SECRET
+    secret: MERCADOPAGO_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+  - variable: INFORME_PRECIO_CENTS
+    value: "250000"
+    availability:
+      - RUNTIME

@@ -102,12 +102,7 @@ Hemos recibido correctamente su reclamo ante UCU — Usuarios y Consumidores Uni
 Número de reclamo: #${id}
 Resumen: ${payload.resumen}
 
-Su caso se encuentra en revisión inicial. Nuestro equipo lo tomará a la brevedad y le iremos informando los avances por este medio.
-
-Puede consultar el estado de su reclamo en cualquier momento ingresando a:
-${siteUrl}/reclamos/consultar?id=${id}
-
-Necesitará su número de reclamo (#${id}) y su número de documento para acceder.
+Su denuncia llegó a UCU y quedó registrada. Nuestro equipo la revisará; si corresponde, nos pondremos en contacto con usted por este medio.
 
 Ante cualquier consulta puede comunicarse con nosotros respondiendo este email o llamando al (0336) 442-XXXX.
 

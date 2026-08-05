@@ -13,9 +13,8 @@ const mainNav = [
   { href: '/planes-de-ahorro-son-una-trampa', label: 'Campaña' },
   { href: '/posts', label: 'Noticias' },
   { href: '/educacion-financiera', label: 'Educación financiera' },
-  { href: '/reclamos', label: 'Reclamos' },
+  { href: '/reclamos', label: 'Hacé tu denuncia' },
   { href: '/observatorio', label: 'Observatorio' },
-  { href: '/categorias', label: 'Categorías' },
 ];
 
 function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
@@ -123,9 +122,9 @@ export function SiteFooter() {
             {[
               { href: '/posts', label: 'Noticias' },
               { href: '/planes-de-ahorro-son-una-trampa', label: 'Campaña planes de ahorro' },
-              { href: '/reclamos', label: 'Reclamos' },
+              { href: '/reclamos', label: 'Hacé tu denuncia' },
+              { href: '/reclamos/estadisticas', label: 'Estadísticas de denuncias' },
               { href: '/observatorio', label: 'Observatorio' },
-              { href: '/categorias', label: 'Categorías' },
               { href: '/categoria/alertas-de-fraude', label: 'Alertas de fraude' },
               { href: '/categoria/acciones-colectivas', label: 'Acciones colectivas' },
             ].map((item) => (
@@ -213,18 +212,18 @@ export function HeroSection() {
               Defendemos tus derechos como consumidor
             </h1>
             <p className="mb-8 max-w-lg font-serif text-base leading-relaxed text-white/75 md:text-lg">
-              Noticias, alertas de fraude, acciones colectivas y recursos para que
-              conozcas y ejerzas tus derechos en todo el país.
+              Presentá tu denuncia, consultá estadísticas por empresa y conocé
+              alertas, campañas y recursos para ejercer tus derechos en todo el país.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/planes-de-ahorro-son-una-trampa" className="ucu-btn-primary">
+              <Link href="/reclamos/nuevo" className="ucu-btn-primary">
+                Hacé tu denuncia
+              </Link>
+              <Link href="/reclamos/estadisticas" className="ucu-btn-outline">
+                Estadísticas de denuncias
+              </Link>
+              <Link href="/planes-de-ahorro-son-una-trampa" className="ucu-btn-outline">
                 Campaña planes de ahorro
-              </Link>
-              <Link href="/reclamos" className="ucu-btn-outline">
-                Hacer un reclamo
-              </Link>
-              <Link href="/posts" className="ucu-btn-outline">
-                Ver noticias
               </Link>
             </div>
           </div>
@@ -236,11 +235,11 @@ export function HeroSection() {
               </p>
               <ul className="space-y-5">
                 {[
+                  { label: 'Presentar una denuncia', href: '/reclamos/nuevo', color: 'text-ucu-green' },
+                  { label: 'Estadísticas por empresa', href: '/reclamos/estadisticas', color: 'text-ucu-yellow' },
                   { label: 'Alertas de fraude', href: '/categoria/alertas-de-fraude', color: 'text-ucu-magenta' },
                   { label: 'Planes de ahorro', href: '/planes-de-ahorro-son-una-trampa', color: 'text-ucu-blue' },
-                  { label: 'Reclamos online', href: '/reclamos', color: 'text-ucu-green' },
                   { label: 'Observatorio de fallos', href: '/observatorio', color: 'text-ucu-yellow' },
-                  { label: 'Acciones colectivas', href: '/categoria/acciones-colectivas', color: 'text-ucu-blue' },
                 ].map((item) => (
                   <li key={item.href}>
                     <Link

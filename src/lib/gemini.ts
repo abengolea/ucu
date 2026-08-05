@@ -497,3 +497,56 @@ Redactá el borrador de contestación de oficio listo para revisar y editar.`;
 
   return callGemini(system, userPrompt);
 }
+
+export async function generateInformeSintesis(input: {
+  empresaNombre: string;
+  total: number;
+  rangoFechas: { desde: string | null; hasta: string | null };
+  porCausa: { causa: string; count: number }[];
+  muestras: string[];
+}): Promise<{ sintesis: string; temas: string[] }> {
+  const system = `Sos analista de Usuarios y Consumidores Unidos (UCU), asociación argentina de defensa del consumidor.
+Redactás síntesis claras para consumidores que compraron un informe estadístico de reclamos recibidos por UCU contra una empresa.
+Reglas:
+- Español argentino claro, tuteo ("vos").
+- Solo información agregada; no inventes cifras ni causas que no te den.
+- No menciones DNI, nombres, emails, teléfonos ni datos personales.
+- No afirmes ilegalidad, condena ni responsabilidad judicial: son reclamos recibidos por UCU.
+- Sé útil: explicá qué se reclama con más frecuencia y qué patrones se ven.
+- Máximo 900 caracteres en "sintesis". Preferí 2 párrafos cortos.
+- Respondé SOLO JSON: { "sintesis": "texto con \\n\\n entre párrafos", "temas": ["3 a 6 temas cortos"] }`;
+
+  const causasTxt =
+    input.porCausa.filter((c) => c.causa !== 'Sin causa tipificada').length > 0
+      ? input.porCausa
+          .filter((c) => c.causa !== 'Sin causa tipificada')
+          .map((c) => `- ${c.causa}: ${c.count}`)
+          .join('\n')
+      : '- Sin causas tipificadas en el catálogo';
+
+  const muestrasTxt =
+    input.muestras.length > 0
+      ? input.muestras.map((m, i) => `${i + 1}. ${m}`).join('\n')
+      : 'Sin muestras textuales disponibles.';
+
+  const prompt = `Empresa: ${input.empresaNombre}
+Total de reclamos: ${input.total}
+Período: ${input.rangoFechas.desde ?? '—'} a ${input.rangoFechas.hasta ?? '—'}
+
+Causas tipificadas (cantidad de apariciones):
+${causasTxt}
+
+Muestras anonimizadas de reclamos (solo referencia cualitativa):
+${muestrasTxt}
+
+Generá la síntesis para el informe pago.`;
+
+  const raw = await callGemini(system, prompt, { json: true });
+  const parsed = JSON.parse(raw) as { sintesis?: string; temas?: string[] };
+  const sintesis = String(parsed.sintesis ?? '').trim();
+  const temas = Array.isArray(parsed.temas)
+    ? parsed.temas.map(String).map((t) => t.trim()).filter(Boolean).slice(0, 6)
+    : [];
+  if (!sintesis) throw new Error('Gemini no devolvió síntesis');
+  return { sintesis, temas };
+}

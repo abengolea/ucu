@@ -13,7 +13,8 @@ const STATIC_ROUTES: Array<{
   { path: '/categorias', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/reclamos', changeFrequency: 'monthly', priority: 0.9 },
   { path: '/reclamos/nuevo', changeFrequency: 'monthly', priority: 0.8 },
-  { path: '/reclamos/consultar', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/reclamos/estadisticas', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/verificar', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/observatorio', changeFrequency: 'daily', priority: 0.9 },
   { path: '/observatorio/buscar', changeFrequency: 'daily', priority: 0.8 },
   {

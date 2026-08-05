@@ -2,7 +2,11 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['firebase-admin'],
+  serverExternalPackages: ['firebase-admin', 'pdfkit'],
+  // pdfkit lee sus métricas .afm desde disco en runtime; el tracing no las detecta.
+  outputFileTracingIncludes: {
+    '/api/**': ['./node_modules/pdfkit/js/data/**'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

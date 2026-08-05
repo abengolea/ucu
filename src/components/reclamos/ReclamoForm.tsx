@@ -145,15 +145,9 @@ export function ReclamoForm() {
           Tu número de reclamo es <strong className="text-3xl">{successId}</strong>
         </p>
         <p className="mt-2 text-sm text-green-700">
-          Guardalo junto con tu documento para consultar el estado en cualquier momento.
+          Tu denuncia llegó a UCU. Guardá este número. Si corresponde, te contactaremos nosotros.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link
-            href={`/reclamos/consultar?id=${successId}`}
-            className="rounded-lg bg-[#1a5fb4] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#004a80]"
-          >
-            Consultar estado
-          </Link>
           <Link href="/reclamos" className="rounded-lg border border-green-300 px-5 py-2.5 text-sm font-semibold text-green-900">
             Volver
           </Link>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { PostList } from '@/components/PostCard';
 import { CampaignBanner } from '@/components/campaign/CampaignBanner';
+import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner';
 import { CategorySidebar, HeroSection } from '@/components/SiteHeader';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { SectionHeader, ServiceCard } from '@/components/ui/PageHeader';
@@ -53,6 +53,7 @@ export default async function HomePage() {
         })}
       />
       <HeroSection />
+      <DenunciasStatsBanner />
       <CampaignBanner />
 
       <main className="mx-auto max-w-6xl px-4 py-12 lg:px-6">
@@ -76,16 +77,16 @@ export default async function HomePage() {
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <ServiceCard
-              title="Alertas de fraude"
+              title="Hacé tu denuncia"
               accent="magenta"
-              description="Información sobre estafas, cobranzas abusivas y prácticas ilegales que afectan a consumidores."
-              href="/categoria/alertas-de-fraude"
+              description="Presentá tu denuncia de consumo en forma gratuita. UCU la registra y, según el caso, puede asesorarte u orientarte."
+              href="/reclamos"
             />
             <ServiceCard
-              title="Reclamos de consumo"
+              title="Estadísticas de denuncias"
               accent="green"
-              description="Realizá tu reclamo online y seguí su estado con Usuarios Protegidos hasta la conciliación."
-              href="/reclamos"
+              description="Consultá cuántas denuncias recibió UCU contra una empresa e informate con un PDF certificable."
+              href="/reclamos/estadisticas"
             />
             <ServiceCard
               title="Planes de ahorro"

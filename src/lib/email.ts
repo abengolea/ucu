@@ -37,7 +37,7 @@ export type SendEmailOptions = {
 
 export async function sendEmail(opts: SendEmailOptions): Promise<{ id: string }> {
   const resend = getResend();
-  const html = bodyToHtml(opts.body);
+  const html = bodyToHtml(opts.body, opts.subject);
   const replyTo = buildReplyToAddress(opts.reclamoId);
 
   const { data, error } = await resend.emails.send({
@@ -109,42 +109,118 @@ export function parseSenderName(fromHeader: string): { email: string; name: stri
   return { name: fromHeader.trim(), email: fromHeader.trim() };
 }
 
-// Convierte texto plano con saltos de línea a HTML simple con el estilo UCU
-function bodyToHtml(text: string): string {
-  const lines = text
+function linkifyText(text: string): string {
+  const urlPattern = /https?:\/\/[^\s]+/g;
+  let cursor = 0;
+  let html = '';
+
+  for (const match of text.matchAll(urlPattern)) {
+    const index = match.index ?? 0;
+    const url = match[0];
+    html += escapeHtml(text.slice(cursor, index));
+    html += `<a href="${escapeHtml(url)}" style="color:#0066b3;font-weight:600;text-decoration:underline;text-decoration-color:#b8d8ed;text-underline-offset:3px">${escapeHtml(url)}</a>`;
+    cursor = index + url.length;
+  }
+
+  return html + escapeHtml(text.slice(cursor));
+}
+
+function renderEmailBody(text: string): string {
+  return text
     .split('\n')
-    .map((line) => `<p style="margin:0 0 8px 0;line-height:1.6">${escapeHtml(line) || '&nbsp;'}</p>`)
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return '<div style="height:12px;line-height:12px">&nbsp;</div>';
+
+      const action = trimmed.match(
+        /^(Descargar PDF|Validar emisión):\s+(https?:\/\/\S+)$/i
+      );
+      if (action) {
+        const isPrimary = action[1].toLocaleLowerCase('es-AR').startsWith('descargar');
+        return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 10px">
+          <tr>
+            <td style="border-radius:6px;background:${isPrimary ? '#0066b3' : '#ffffff'};border:1px solid ${isPrimary ? '#0066b3' : '#b8c7d3'}">
+              <a href="${escapeHtml(action[2])}" style="display:inline-block;padding:12px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1;font-weight:700;color:${isPrimary ? '#ffffff' : '#0066b3'};text-decoration:none">
+                ${escapeHtml(action[1])}
+              </a>
+            </td>
+          </tr>
+        </table>`;
+      }
+
+      if (/^Hola[,!:]?$/i.test(trimmed)) {
+        return `<p style="margin:0 0 14px;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.7;color:#30343b">${escapeHtml(trimmed)}</p>`;
+      }
+
+      if (/^—\s*/.test(trimmed)) {
+        return `<p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;font-weight:700;color:#3f4b55">${escapeHtml(trimmed)}</p>`;
+      }
+
+      return `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:1.7;color:#30343b">${linkifyText(trimmed)}</p>`;
+    })
     .join('');
+}
+
+// Plantilla transaccional compatible con clientes de correo y alineada con la web UCU.
+function bodyToHtml(text: string, subject: string): string {
+  const content = renderEmailBody(text);
+  const safeSubject = escapeHtml(subject);
 
   return `<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:system-ui,-apple-system,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${safeSubject}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f8fa;font-family:Arial,Helvetica,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">
+    Comunicación institucional de Usuarios y Consumidores Unidos.
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f5f8fa">
     <tr><td align="center">
-      <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%">
-        <!-- Header -->
+      <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="width:100%;max-width:620px;margin:0 auto">
+        <tr><td height="32" style="height:32px">&nbsp;</td></tr>
         <tr>
-          <td style="background:#1a5fb4;border-radius:12px 12px 0 0;padding:20px 28px">
-            <p style="margin:0;font-size:18px;font-weight:700;color:#fff">UCU — Usuarios Consumidores Unidos</p>
-            <p style="margin:4px 0 0;font-size:13px;color:#bfdbfe">Área de Reclamos · Usuarios Protegidos</p>
+          <td style="font-size:0;line-height:0">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="25%" height="5" style="height:5px;background:#0066b3">&nbsp;</td>
+                <td width="25%" height="5" style="height:5px;background:#e6007e">&nbsp;</td>
+                <td width="25%" height="5" style="height:5px;background:#fdb913">&nbsp;</td>
+                <td width="25%" height="5" style="height:5px;background:#8bc53f">&nbsp;</td>
+              </tr>
+            </table>
           </td>
         </tr>
-        <!-- Body -->
         <tr>
-          <td style="background:#fff;padding:28px;font-size:14px;color:#1e293b">
-            ${lines}
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f8fafc;border-radius:0 0 12px 12px;padding:16px 28px;border-top:1px solid #e2e8f0">
-            <p style="margin:0;font-size:12px;color:#64748b">
-              UCU · San Nicolás de los Arroyos, Buenos Aires ·
-              <a href="https://consumidoresprotegidos.com.ar" style="color:#1a5fb4">consumidoresprotegidos.com.ar</a>
+          <td style="background:#0066b3;padding:24px 34px">
+            <img src="https://ucu.org.ar/brand/logo-ucu-white.png" width="136" alt="UCU — Usuarios y Consumidores Unidos" style="display:block;width:136px;max-width:100%;height:auto;border:0">
+            <p style="margin:12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;font-weight:600;letter-spacing:.04em;color:#d8ebf8">
+              Defensa y protección de las personas consumidoras
             </p>
           </td>
         </tr>
+        <tr>
+          <td style="background:#ffffff;padding:36px 34px 38px;border-left:1px solid #dce3e8;border-right:1px solid #dce3e8">
+            <h1 style="margin:0 0 26px;font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:1.25;font-weight:700;letter-spacing:-.02em;color:#30343b">
+              ${safeSubject}
+            </h1>
+            ${content}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#edf4f8;padding:20px 34px;border:1px solid #dce3e8;border-radius:0 0 8px 8px">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.7;color:#596773">
+              <strong style="color:#30343b">Usuarios y Consumidores Unidos</strong><br>
+              San Nicolás de los Arroyos, Buenos Aires<br>
+              <a href="https://ucu.org.ar" style="color:#0066b3;font-weight:700;text-decoration:none">ucu.org.ar</a>
+            </p>
+          </td>
+        </tr>
+        <tr><td height="32" style="height:32px">&nbsp;</td></tr>
       </table>
     </td></tr>
   </table>
