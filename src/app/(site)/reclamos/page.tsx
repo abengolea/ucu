@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { AlertTriangle } from 'lucide-react';
 import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner';
+import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { buildPageMetadata } from '@/lib/seo';
 
@@ -29,27 +28,15 @@ export default function ReclamosPage() {
         className="text-center [&_h1]:mx-auto [&_p]:mx-auto"
       />
 
-      <div className="mb-8">
-        <DenunciasStatsBanner compact />
+      <div
+        className="mb-10 grid items-stretch gap-5 md:grid-cols-2"
+        aria-label="Acciones de denuncias"
+      >
+        <PresentarDenunciaCard />
+        <DenunciasStatsBanner compact className="h-full" />
       </div>
 
-      <article className="ucu-card-interactive ucu-accent-top mx-auto max-w-xl p-7">
-        <div className="mb-5 inline-flex rounded-md bg-ucu-magenta/10 p-3 text-ucu-magenta">
-          <AlertTriangle className="h-6 w-6" strokeWidth={1.75} />
-        </div>
-        <h2 className="font-display text-xl font-bold tracking-tight text-[var(--ink)]">
-          Presentar una denuncia
-        </h2>
-        <p className="mt-3 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-          Completá el formulario con tus datos, contanos qué pasó y seleccioná las empresas
-          denunciadas. Nos llega tu mensaje; si corresponde, te contactamos nosotros.
-        </p>
-        <Link href="/reclamos/nuevo" className="ucu-btn-primary mt-6">
-          Presentar denuncia
-        </Link>
-      </article>
-
-      <section className="mt-10 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6">
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-6">
         <h3 className="font-display text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
           Contacto
         </h3>

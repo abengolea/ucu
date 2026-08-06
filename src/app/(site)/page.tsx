@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { PostList } from '@/components/PostCard';
 import { CampaignBanner } from '@/components/campaign/CampaignBanner';
 import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner';
+import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
 import { CategorySidebar, HeroSection } from '@/components/SiteHeader';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { SectionHeader, ServiceCard } from '@/components/ui/PageHeader';
@@ -53,7 +54,13 @@ export default async function HomePage() {
         })}
       />
       <HeroSection />
-      <DenunciasStatsBanner />
+      <section
+        className="mx-auto grid max-w-6xl items-stretch gap-5 px-4 py-8 md:grid-cols-2 lg:px-6 lg:py-10"
+        aria-label="Denuncias de consumo"
+      >
+        <PresentarDenunciaCard />
+        <DenunciasStatsBanner compact className="h-full" />
+      </section>
       <CampaignBanner />
 
       <main className="mx-auto max-w-6xl px-4 py-12 lg:px-6">
@@ -77,10 +84,10 @@ export default async function HomePage() {
           />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <ServiceCard
-              title="Hacé tu denuncia"
+              title="Alertas de fraude"
               accent="magenta"
-              description="Presentá tu denuncia de consumo en forma gratuita. UCU la registra y, según el caso, puede asesorarte u orientarte."
-              href="/reclamos"
+              description="Información sobre estafas, cobranzas abusivas y prácticas ilegales que afectan a consumidores."
+              href="/categoria/alertas-de-fraude"
             />
             <ServiceCard
               title="Estadísticas de denuncias"

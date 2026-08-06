@@ -11,6 +11,12 @@ let adminDbInstance: Firestore | null = null;
 let adminAuthInstance: Auth | null = null;
 let adminStorageInstance: Storage | null = null;
 
+declare global {
+  // Persist across Turbopack/HMR module reloads (Firestore settings() is once-only).
+  // eslint-disable-next-line no-var
+  var __ucuFirestoreIgnoreUndefined: boolean | undefined;
+}
+
 function loadServiceAccount() {
   const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (credentialsPath && fs.existsSync(credentialsPath)) {
@@ -75,10 +81,20 @@ export function getAdminDb(): Firestore | null {
   const app = getAppOrNull();
   if (!app) return null;
 
-  adminDbInstance = getFirestore(app);
+  const db = getFirestore(app);
   // Form builders omit optional fields as `undefined`; Firestore rejects those
   // unless ignoreUndefinedProperties is on (broke POST /api/reclamos in prod).
-  adminDbInstance.settings({ ignoreUndefinedProperties: true });
+  // settings() may only run once and before other Firestore calls — HMR can
+  // re-enter here with an already-initialized instance.
+  if (!globalThis.__ucuFirestoreIgnoreUndefined) {
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch {
+      // Already initialized in this process.
+    }
+    globalThis.__ucuFirestoreIgnoreUndefined = true;
+  }
+  adminDbInstance = db;
   return adminDbInstance;
 }
 
