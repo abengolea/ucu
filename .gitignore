@@ -49,4 +49,5 @@ imports/reclamos/backup-fz3/
 imports/fallos-pdf/
 imports/**/*.bak
 imports/**/*.xml
+imports/drive-ai-cache.json
 service-account.json
