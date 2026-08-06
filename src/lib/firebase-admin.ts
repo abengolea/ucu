@@ -76,6 +76,9 @@ export function getAdminDb(): Firestore | null {
   if (!app) return null;
 
   adminDbInstance = getFirestore(app);
+  // Form builders omit optional fields as `undefined`; Firestore rejects those
+  // unless ignoreUndefinedProperties is on (broke POST /api/reclamos in prod).
+  adminDbInstance.settings({ ignoreUndefinedProperties: true });
   return adminDbInstance;
 }
 

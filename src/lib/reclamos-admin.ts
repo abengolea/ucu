@@ -24,15 +24,16 @@ export function buildHistorialEntry(
   changedBy?: { email: string; name: string },
   nota?: string
 ): ReclamoHistorialEstado {
-  return {
+  const entry: ReclamoHistorialEstado = {
     idCasoEstado,
     estadoDescripcion,
-    idGrupoEstado,
     changedAt: new Date().toISOString(),
-    changedByEmail: changedBy?.email,
-    changedByName: changedBy?.name,
-    nota,
   };
+  if (idGrupoEstado !== undefined) entry.idGrupoEstado = idGrupoEstado;
+  if (changedBy?.email) entry.changedByEmail = changedBy.email;
+  if (changedBy?.name) entry.changedByName = changedBy.name;
+  if (nota) entry.nota = nota;
+  return entry;
 }
 
 export function buildResponsable(

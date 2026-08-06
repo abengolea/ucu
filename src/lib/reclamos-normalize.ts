@@ -24,22 +24,27 @@ export function buildDenuncianteFromForm(
   const provincia = catalogs.provincias.get(payload.provinciaId);
   const ciudad = catalogs.ciudades.get(payload.ciudadId);
 
-  return {
+  const denunciante: ReclamoDenunciante = {
     nombre: payload.nombre.trim(),
     apellido: payload.apellido.trim(),
     tipoDocumento: payload.tipoDocumento.trim(),
     numeroDocumento: payload.numeroDocumento.trim(),
-    calle: payload.calle?.trim() || undefined,
-    numero: payload.numero?.trim() || undefined,
-    piso: payload.piso?.trim() || undefined,
-    depto: payload.depto?.trim() || undefined,
     provinciaId: payload.provinciaId,
     ciudadId: payload.ciudadId,
-    provinciaNombre: provincia?.nombre,
-    ciudadNombre: ciudad?.nombre,
     telefono: payload.telefono.trim(),
     email: payload.email.trim().toLowerCase(),
   };
+  const calle = payload.calle?.trim();
+  const numero = payload.numero?.trim();
+  const piso = payload.piso?.trim();
+  const depto = payload.depto?.trim();
+  if (calle) denunciante.calle = calle;
+  if (numero) denunciante.numero = numero;
+  if (piso) denunciante.piso = piso;
+  if (depto) denunciante.depto = depto;
+  if (provincia?.nombre) denunciante.provinciaNombre = provincia.nombre;
+  if (ciudad?.nombre) denunciante.ciudadNombre = ciudad.nombre;
+  return denunciante;
 }
 
 export function resolveEmpresaRefs(
@@ -68,17 +73,15 @@ export function buildReclamoDocumentFromForm(
   const estadoDescripcion = estado?.descripcion.trim();
   const idGrupoEstado = estado?.idGrupoEstado;
 
+  const otrasEmpresas = payload.otrasEmpresas?.trim();
   const doc: StoredReclamoDocument = {
     id,
     denunciante,
     resumen: payload.resumen.trim(),
     hecho: payload.hecho.trim(),
-    otrasEmpresas: payload.otrasEmpresas?.trim() || undefined,
     empresaIds: payload.empresaIds,
     empresas,
     idCasoEstado,
-    estadoDescripcion,
-    idGrupoEstado,
     historialEstados: [
       buildHistorialEntry(
         idCasoEstado,
@@ -95,6 +98,9 @@ export function buildReclamoDocumentFromForm(
     createdAt: now,
     updatedAt: now,
   };
+  if (otrasEmpresas) doc.otrasEmpresas = otrasEmpresas;
+  if (estadoDescripcion) doc.estadoDescripcion = estadoDescripcion;
+  if (idGrupoEstado !== undefined) doc.idGrupoEstado = idGrupoEstado;
 
   doc.adminBandeja = computeAdminBandeja(doc);
   return doc;
