@@ -12,9 +12,7 @@
   "apphosting": [
     {
       "backendId": "ucu-staging",
-      "source": ".",
-      "config": "apphosting.yaml",
-      "alwaysDeployFromSource": true,
+      "rootDir": "/",
       "ignore": [
         "node_modules",
         ".git",
@@ -22,7 +20,9 @@
         "imports",
         "legacy",
         "scripts",
-        "terminals"
+        "terminals",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
       ]
     }
   ]
