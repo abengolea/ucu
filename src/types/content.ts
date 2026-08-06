@@ -31,6 +31,7 @@ export type ContentDocument = {
   featuredImage: FeaturedImage | null;
   type: 'post' | 'page';
   originalLink?: string;
+  sourceName?: string;
 };
 
 export type CategoryDocument = {

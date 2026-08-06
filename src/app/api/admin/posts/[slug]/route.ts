@@ -87,6 +87,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     modifiedAt: now,
     author: existing.author,
     wpId: existing.wpId,
+    originalLink: parsed.originalLink,
+    sourceName: parsed.sourceName,
   });
 
   const batch = db.batch();

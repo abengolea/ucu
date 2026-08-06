@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Link2, Loader2 } from 'lucide-react';
 import { slugify } from '@/lib/slug';
 import { resolveMediaUrl } from '@/lib/media';
 import type { ContentDocument } from '@/types/content';
@@ -23,6 +23,13 @@ function toDatetimeLocal(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function base64ToFile(base64: string, filename: string, contentType: string): File {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], filename, { type: contentType });
+}
+
 export function PostEditor({ mode, initialSlug }: PostEditorProps) {
   const [loadingPost, setLoadingPost] = useState(mode === 'edit');
   const [title, setTitle] = useState('');
@@ -33,6 +40,11 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
   const [tags, setTags] = useState('');
   const [status, setStatus] = useState<'publish' | 'draft'>('publish');
   const [publishedAt, setPublishedAt] = useState('');
+  const [originalLink, setOriginalLink] = useState('');
+  const [sourceName, setSourceName] = useState('');
+  const [importUrl, setImportUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -68,6 +80,8 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
         setStatus(post.status === 'draft' ? 'draft' : 'publish');
         setPublishedAt(toDatetimeLocal(post.publishedAt));
         setSelectedCategories(post.categorySlugs || []);
+        setOriginalLink(post.originalLink || '');
+        setSourceName(post.sourceName || '');
         setExistingImageUrl(resolveMediaUrl(post.featuredImage?.url));
       })
       .catch(() => setError('No se pudo cargar la nota'))
@@ -99,6 +113,68 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
     setPreviewUrl(file ? URL.createObjectURL(file) : null);
   }
 
+  async function handleImportFromUrl() {
+    const url = importUrl.trim();
+    if (!url) {
+      setError('Pegá la URL de la nota del diario');
+      return;
+    }
+
+    setImporting(true);
+    setError('');
+    setSuccess('');
+    setImportWarnings([]);
+
+    try {
+      const res = await fetch('/api/admin/posts/import-url', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo importar la nota');
+        return;
+      }
+
+      const article = data.article as {
+        title: string;
+        excerpt: string;
+        content: string;
+        sourceName: string;
+        url: string;
+        warnings?: string[];
+        image?: { base64: string; contentType: string; filename: string } | null;
+      };
+
+      setTitle(article.title);
+      setExcerpt(article.excerpt || '');
+      setContent(article.content || '');
+      setOriginalLink(article.url);
+      setSourceName(article.sourceName || '');
+      setImportWarnings(Array.isArray(article.warnings) ? article.warnings : []);
+      if (mode === 'create') {
+        setSlugEdited(false);
+        setStatus('draft');
+      }
+
+      if (article.image?.base64) {
+        handleImageChange(
+          base64ToFile(article.image.base64, article.image.filename, article.image.contentType)
+        );
+      }
+
+      setSuccess(
+        `Importado desde ${article.sourceName}. Quedó como borrador: revisá el texto y pasá el estado a Publicada para subirla al sitio.`
+      );
+    } catch {
+      setError('Error de conexión al importar');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -114,6 +190,8 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
     form.append('status', status);
     form.append('publishedAt', publishedAt ? new Date(publishedAt).toISOString() : '');
     form.append('categorySlugs', JSON.stringify(selectedCategories));
+    form.append('originalLink', originalLink);
+    form.append('sourceName', sourceName);
     form.append('removeFeaturedImage', String(removeFeaturedImage));
     if (featuredImage) form.append('featuredImage', featuredImage);
 
@@ -132,8 +210,22 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
         return;
       }
 
-      setSuccess(mode === 'edit' ? 'Nota actualizada' : 'Nota publicada');
+      const savedSlug = String(data.slug || slug || initialSlug || '');
+      const isDraft = status === 'draft';
+      setSuccess(
+        mode === 'edit'
+          ? isDraft
+            ? 'Borrador actualizado'
+            : 'Nota actualizada'
+          : isDraft
+            ? 'Borrador guardado'
+            : 'Nota publicada'
+      );
       setTimeout(() => {
+        if (isDraft && savedSlug) {
+          window.location.href = `/admin/posts/${encodeURIComponent(savedSlug)}/editar`;
+          return;
+        }
         if (mode === 'edit' && data.slug && data.slug !== initialSlug) {
           window.location.href = `/admin/posts/${encodeURIComponent(data.slug)}/editar`;
           return;
@@ -227,6 +319,46 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
         ) : null}
       </div>
 
+      <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50/70 p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Link2 className="h-4 w-4 text-sky-800" />
+          <h2 className="text-sm font-semibold text-sky-950">Importar desde diario</h2>
+        </div>
+        <p className="mb-3 text-sm text-sky-900/80">
+          Pegá el link de la nota: copiamos título, texto, foto y fuente para que la hagas propia.
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void handleImportFromUrl();
+              }
+            }}
+            placeholder="https://www.iprofesional.com/..."
+            className="w-full flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#1a5fb4]"
+          />
+          <button
+            type="button"
+            onClick={() => void handleImportFromUrl()}
+            disabled={importing}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1a5fb4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#154a8a] disabled:opacity-60"
+          >
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {importing ? 'Detectando…' : 'Detectar y copiar'}
+          </button>
+        </div>
+        {importWarnings.length ? (
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-900">
+            {importWarnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6">
           {error ? (
@@ -312,12 +444,38 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : status === 'draft' ? (
+                mode === 'edit' ? 'Guardar borrador' : 'Guardar como borrador'
               ) : mode === 'edit' ? (
                 'Actualizar nota'
               ) : (
                 'Publicar nota'
               )}
             </button>
+            {status === 'draft' ? (
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                Los borradores no se ven en el sitio. Cambiá el estado a{' '}
+                <strong>Publicada</strong> para verla en /posts.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <h2 className="mb-4 font-semibold text-slate-900">Fuente</h2>
+            <label className="mb-1 block text-sm font-medium text-slate-600">Medio</label>
+            <input
+              value={sourceName}
+              onChange={(e) => setSourceName(e.target.value)}
+              placeholder="iProfesional"
+              className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+            />
+            <label className="mb-1 block text-sm font-medium text-slate-600">Link original</label>
+            <input
+              value={originalLink}
+              onChange={(e) => setOriginalLink(e.target.value)}
+              placeholder="https://..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+            />
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6">

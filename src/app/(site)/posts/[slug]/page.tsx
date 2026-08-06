@@ -114,6 +114,23 @@ export default async function PostDetailPage({
           <time dateTime={post.publishedAt}>
             {format(new Date(post.publishedAt), "d 'de' MMMM yyyy", { locale: es })}
           </time>
+          {post.sourceName || post.originalLink ? (
+            <>
+              <span aria-hidden>·</span>
+              {post.originalLink ? (
+                <a
+                  href={post.originalLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--ink-muted)] underline-offset-2 hover:underline"
+                >
+                  Fuente: {post.sourceName || 'original'}
+                </a>
+              ) : (
+                <span>Fuente: {post.sourceName}</span>
+              )}
+            </>
+          ) : null}
         </div>
 
         {imageUrl ? (

@@ -11,6 +11,8 @@ export type ParsedPostForm = {
   categorySlugs: string[];
   tagNames: string[];
   publishedAt?: string;
+  originalLink?: string;
+  sourceName?: string;
   removeFeaturedImage: boolean;
   image: File | null;
 };
@@ -31,6 +33,8 @@ export function parsePostForm(form: FormData): ParsedPostForm {
       .map((t) => t.trim())
       .filter(Boolean),
     publishedAt: String(form.get('publishedAt') || '').trim() || undefined,
+    originalLink: String(form.get('originalLink') || '').trim() || undefined,
+    sourceName: String(form.get('sourceName') || '').trim() || undefined,
     removeFeaturedImage: String(form.get('removeFeaturedImage') || '') === 'true',
     image: imageEntry instanceof File && imageEntry.size > 0 ? imageEntry : null,
   };
@@ -127,6 +131,8 @@ export function buildPostDocument(input: {
   modifiedAt: string;
   author: ContentDocument['author'];
   wpId?: number;
+  originalLink?: string;
+  sourceName?: string;
 }): ContentDocument {
   return {
     wpId: input.wpId ?? 0,
@@ -144,5 +150,7 @@ export function buildPostDocument(input: {
     tagSlugs: input.tags.map((t) => t.slug),
     featuredImage: input.featuredImage,
     type: 'post',
+    ...(input.originalLink ? { originalLink: input.originalLink } : {}),
+    ...(input.sourceName ? { sourceName: input.sourceName } : {}),
   };
 }

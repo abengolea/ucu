@@ -79,6 +79,8 @@ export async function POST(request: NextRequest) {
       name: 'Usuarios y Consumidores Unidos',
       email: 'info@ucu.org.ar',
     },
+    originalLink: parsed.originalLink,
+    sourceName: parsed.sourceName,
   });
 
   await db.collection('posts').doc(slug).set(post);
