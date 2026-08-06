@@ -56,6 +56,8 @@ export function AdminReclamosList({
   const [bandeja, setBandeja] = useState<ReclamoAdminBandeja | 'todos'>(
     mode === 'assigned' ? 'todos' : 'recibidos'
   );
+  const [responsableInput, setResponsableInput] = useState('');
+  const [responsableQuery, setResponsableQuery] = useState('');
   const [reclamos, setReclamos] = useState<AdminReclamoListItem[]>([]);
   const [counts, setCounts] = useState<BandejaCounts>({ recibidos: 0, gestion: 0, archivados: 0 });
   const [assignedCount, setAssignedCount] = useState(0);
@@ -63,6 +65,25 @@ export function AdminReclamosList({
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<number | null>(null);
+
+  const filterByResponsable = mode === 'all' && Boolean(responsableQuery);
+  const apiBandeja: ReclamoAdminBandeja | 'todos' =
+    mode === 'assigned' || filterByResponsable ? 'todos' : bandeja;
+
+  useEffect(() => {
+    if (mode !== 'all') return;
+    const handle = window.setTimeout(() => {
+      const next = responsableInput.trim();
+      setResponsableQuery(next);
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [responsableInput, mode]);
+
+  useEffect(() => {
+    if (responsableQuery && bandeja === 'recibidos') {
+      setBandeja('todos');
+    }
+  }, [responsableQuery, bandeja]);
 
   function canArchiveReclamo(reclamo: AdminReclamoListItem): boolean {
     if (!canWriteReclamos || reclamo.adminBandeja === 'archivados') return false;
@@ -103,10 +124,12 @@ export function AdminReclamosList({
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        bandeja: mode === 'assigned' ? 'todos' : bandeja,
-      });
-      if (mode === 'assigned') params.set('asignado', 'mi');
+      const params = new URLSearchParams({ bandeja: apiBandeja });
+      if (mode === 'assigned') {
+        params.set('asignado', 'mi');
+      } else if (responsableQuery) {
+        params.set('responsable', responsableQuery);
+      }
 
       const res = await fetch(`/api/admin/reclamos?${params.toString()}`, { credentials: 'include' });
       const data = await res.json();
@@ -120,24 +143,24 @@ export function AdminReclamosList({
     } finally {
       setLoading(false);
     }
-  }, [mode, bandeja]);
+  }, [mode, apiBandeja, responsableQuery]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const assignedSource = mode === 'assigned' ? reclamos : [];
+  const clientBandejaSource = mode === 'assigned' || filterByResponsable ? reclamos : [];
   const bandejaCounts =
-    mode === 'assigned'
+    mode === 'assigned' || filterByResponsable
       ? {
-          recibidos: assignedSource.filter((item) => item.adminBandeja === 'recibidos').length,
-          gestion: assignedSource.filter((item) => item.adminBandeja === 'gestion').length,
-          archivados: assignedSource.filter((item) => item.adminBandeja === 'archivados').length,
+          recibidos: clientBandejaSource.filter((item) => item.adminBandeja === 'recibidos').length,
+          gestion: clientBandejaSource.filter((item) => item.adminBandeja === 'gestion').length,
+          archivados: clientBandejaSource.filter((item) => item.adminBandeja === 'archivados').length,
         }
       : counts;
 
   const visibleReclamos =
-    mode === 'assigned' && bandeja !== 'todos'
+    (mode === 'assigned' || filterByResponsable) && bandeja !== 'todos'
       ? reclamos.filter((item) => item.adminBandeja === bandeja)
       : reclamos;
 
@@ -202,12 +225,25 @@ export function AdminReclamosList({
         })}
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar por número, nombre, empresa o resumen…"
-        className="mb-4 w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
-      />
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por número, nombre, empresa o resumen…"
+          className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+        />
+        {mode === 'all' ? (
+          <label className="flex w-full max-w-xs flex-col gap-1 text-sm text-slate-600">
+            <span className="font-semibold text-slate-700">Responsable</span>
+            <input
+              value={responsableInput}
+              onChange={(e) => setResponsableInput(e.target.value)}
+              placeholder="Ej. bengolea, sin asignar…"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+            />
+          </label>
+        ) : null}
+      </div>
 
       {error ? (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

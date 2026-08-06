@@ -248,6 +248,10 @@ export type ListAdminReclamosOptions = {
   limit?: number;
   assignedToEmails?: string[];
   assigneeName?: string;
+  /** Solo reclamos sin responsable asignado. */
+  unassignedOnly?: boolean;
+  /** Búsqueda libre por nombre o email del responsable. */
+  responsableQuery?: string;
 };
 
 async function countReclamosByQuery(
@@ -294,6 +298,25 @@ function matchesAssignee(
   return reclamoAssignedToIdentity(reclamo, emails, assigneeName);
 }
 
+function matchesResponsableQuery(
+  reclamo: StoredReclamoDocument,
+  query: string
+): boolean {
+  const q = query.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+  if (!q) return true;
+
+  if (['sin asignar', 'sin responsable', 'ninguno', 'sin'].includes(q)) {
+    return !reclamo.responsable?.email;
+  }
+
+  const name = (reclamo.responsable?.name ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '');
+  const email = (reclamo.responsable?.email ?? '').toLowerCase();
+  return name.includes(q) || email.includes(q);
+}
+
 /** Conteo asignados por email (aggregation). El match por nombre legacy queda fuera a propósito. */
 export async function countAssignedReclamos(
   loginEmail: string,
@@ -322,15 +345,24 @@ export async function getReclamoCausasFromFirestore(): Promise<ReclamoCausaCatal
 export async function listAdminReclamos(
   options: ListAdminReclamosOptions = {}
 ): Promise<StoredReclamoDocument[]> {
-  const { bandeja = 'todos', limit = 300, assignedToEmails, assigneeName } = options;
-  const assignedFilter = Boolean(assignedToEmails?.length);
-  const fetchLimit = assignedFilter
+  const {
+    bandeja = 'todos',
+    limit = 300,
+    assignedToEmails,
+    assigneeName,
+    unassignedOnly = false,
+    responsableQuery,
+  } = options;
+  const responsableQ = responsableQuery?.trim() ?? '';
+  const identityFilter =
+    Boolean(assignedToEmails?.length) || unassignedOnly || Boolean(responsableQ);
+  const fetchLimit = identityFilter
     ? Math.max(limit, 5000)
     : bandeja === 'todos'
       ? limit
       : Math.max(limit * 4, 800);
 
-  const snap = assignedFilter
+  const snap = identityFilter
     ? await dbOrThrow().collection('reclamos').get()
     : await dbOrThrow()
         .collection('reclamos')
@@ -350,8 +382,14 @@ export async function listAdminReclamos(
     items = items.filter((item) => item.adminBandeja === bandeja);
   }
 
-  if (assignedToEmails?.length) {
+  if (unassignedOnly) {
+    items = items.filter((item) => !item.responsable?.email);
+  } else if (assignedToEmails?.length) {
     items = items.filter((item) => matchesAssignee(item, assignedToEmails, assigneeName));
+  }
+
+  if (responsableQ) {
+    items = items.filter((item) => matchesResponsableQuery(item, responsableQ));
   }
 
   items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

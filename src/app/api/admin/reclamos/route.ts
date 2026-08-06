@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
     ? (bandejaParam as ReclamoAdminBandeja | 'todos')
     : 'recibidos';
   const assignedOnly = request.nextUrl.searchParams.get('asignado') === 'mi';
+  const responsableQuery = (request.nextUrl.searchParams.get('responsable') ?? '').trim();
+  const assignedFilterActive = assignedOnly || Boolean(responsableQuery);
 
   try {
     const assigneeContext = assignedOnly
@@ -54,14 +56,16 @@ export async function GET(request: NextRequest) {
         bandeja,
         assignedToEmails: assigneeContext?.emails,
         assigneeName: assigneeContext?.name ?? session.name,
+        responsableQuery: responsableQuery || undefined,
       }),
-      assignedOnly ? Promise.resolve(null) : countAdminReclamosByBandeja(),
+      assignedFilterActive ? Promise.resolve(null) : countAdminReclamosByBandeja(),
       countAssignedReclamos(session.email, session.name),
     ]);
 
     return NextResponse.json({
       bandeja,
       assignedOnly,
+      responsable: responsableQuery || null,
       counts: counts ?? undefined,
       assignedCount,
       reclamos: reclamos.map(mapReclamo),

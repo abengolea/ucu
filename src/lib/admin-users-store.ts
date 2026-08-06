@@ -123,7 +123,14 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
   const snap = await db.collection(COLLECTION).orderBy('createdAt', 'desc').get();
   const users = snap.docs.map((doc) => toPublicUser(docToUser(doc.id, doc.data())));
 
-  const knownEmails = new Set(users.map((u) => u.email));
+  /** Emails ya cubiertos como primario o alias — evita duplicar ADMIN_PANEL_EMAIL en el listado. */
+  const knownEmails = new Set<string>();
+  for (const user of users) {
+    knownEmails.add(user.email);
+    for (const alt of user.alternateEmails ?? []) {
+      knownEmails.add(normalizeEmail(alt));
+    }
+  }
   for (const email of getAllowedAdminEmails()) {
     if (!knownEmails.has(email)) {
       users.unshift(toPublicUser(envBootstrapUser(email)));
