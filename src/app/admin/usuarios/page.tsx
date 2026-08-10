@@ -180,10 +180,9 @@ export default function AdminUsuariosPage() {
               <input
                 type="email"
                 required
-                disabled={Boolean(editingEmail)}
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4] disabled:bg-slate-50 disabled:text-slate-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
                 placeholder="usuario@ejemplo.com"
               />
             </div>

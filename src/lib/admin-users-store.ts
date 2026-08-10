@@ -152,6 +152,8 @@ export async function listReclamosDelegados(): Promise<{ email: string; name: st
 }
 
 export type UpsertAdminUserInput = Pick<AdminUser, 'email' | 'name' | 'role' | 'active'> & {
+  /** Email actual del documento cuando se renombra. */
+  currentEmail?: string;
   reclamosWriteScope?: ReclamosWriteScope;
   createdBy?: string;
   password?: string;
@@ -165,7 +167,100 @@ export async function upsertAdminUser(input: UpsertAdminUserInput): Promise<Admi
   if (!db) throw new Error('Firebase no configurado');
 
   const email = normalizeEmail(input.email);
+  const currentEmail = input.currentEmail ? normalizeEmail(input.currentEmail) : email;
   const now = new Date().toISOString();
+  const renaming = currentEmail !== email;
+
+  if (!email || !email.includes('@')) {
+    throw new Error('Email inválido');
+  }
+
+  if (renaming) {
+    if (getAllowedAdminEmails().includes(currentEmail)) {
+      throw new Error(
+        'No se puede cambiar el email de un usuario definido en variables de entorno'
+      );
+    }
+
+    const oldRef = db.collection(COLLECTION).doc(currentEmail);
+    const newRef = db.collection(COLLECTION).doc(email);
+    const [oldSnap, newSnap] = await Promise.all([oldRef.get(), newRef.get()]);
+
+    if (!oldSnap.exists) {
+      throw new Error('Usuario no encontrado');
+    }
+    if (newSnap.exists) {
+      throw new Error('Ya existe un usuario con ese email');
+    }
+
+    const { findAdminUserByAnyEmail } = await import('@/lib/admin-assignee-identity');
+    const linked = await findAdminUserByAnyEmail(email);
+    if (linked && normalizeEmail(linked.email) !== currentEmail) {
+      throw new Error('Ese email ya está asociado a otro usuario');
+    }
+
+    const existingData = oldSnap.data() ?? {};
+    const reclamosWriteScope = getReclamosWriteScopeForRole(
+      input.role,
+      input.reclamosWriteScope ?? (existingData.reclamosWriteScope as ReclamosWriteScope | undefined)
+    );
+
+    const previousAlternates = Array.isArray(existingData.alternateEmails)
+      ? existingData.alternateEmails
+          .filter((item): item is string => typeof item === 'string')
+          .map((item) => normalizeEmail(item))
+          .filter(Boolean)
+      : [];
+    const alternateEmails = [
+      ...new Set(
+        [...previousAlternates, currentEmail].filter((item) => item && item !== email)
+      ),
+    ];
+
+    const payload: Record<string, unknown> = {
+      email,
+      name: input.name.trim(),
+      role: input.role,
+      active: input.active,
+      reclamosWriteScope,
+      alternateEmails,
+      updatedAt: now,
+      createdAt: existingData.createdAt ?? now,
+      createdBy: existingData.createdBy ?? input.createdBy,
+    };
+
+    if (typeof input.password === 'string' && input.password.trim()) {
+      payload.passwordHash = await hashAdminPassword(input.password.trim());
+      payload.legacyPasswordHash = null;
+      payload.legacyUsername = null;
+    } else {
+      if (existingData.passwordHash) payload.passwordHash = existingData.passwordHash;
+      if (existingData.legacyPasswordHash) {
+        payload.legacyPasswordHash = existingData.legacyPasswordHash;
+      }
+      if (existingData.legacyUsername) payload.legacyUsername = existingData.legacyUsername;
+    }
+
+    if (typeof input.legacyPasswordHash === 'string' && input.legacyPasswordHash.trim()) {
+      payload.legacyPasswordHash = input.legacyPasswordHash.trim().toLowerCase();
+    }
+    if (typeof input.legacyUsername === 'string' && input.legacyUsername.trim()) {
+      payload.legacyUsername = input.legacyUsername.trim();
+    }
+    if (input.clearLegacyPassword) {
+      payload.legacyPasswordHash = null;
+      payload.legacyUsername = null;
+    }
+
+    const batch = db.batch();
+    batch.set(newRef, payload);
+    batch.delete(oldRef);
+    await batch.commit();
+
+    const saved = await newRef.get();
+    return toPublicUser(docToUser(saved.id, saved.data() ?? {}));
+  }
+
   const ref = db.collection(COLLECTION).doc(email);
   const existing = await ref.get();
   const existingData = existing.exists ? (existing.data() ?? {}) : {};

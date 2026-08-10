@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminPermission } from '@/lib/admin-session';
+import { requireAdminPermission, setAdminSessionCookie } from '@/lib/admin-session';
 import { ADMIN_ROLE_LABELS } from '@/lib/admin-roles';
 import { deleteAdminUser, upsertAdminUser } from '@/lib/admin-users-store';
 import type { AdminRole, ReclamosWriteScope } from '@/types/admin-users';
@@ -18,9 +18,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   }
 
-  const email = decodeEmail((await context.params).id);
+  const currentEmail = decodeEmail((await context.params).id);
 
   let body: {
+    email?: string;
     name?: string;
     role?: string;
     active?: boolean;
@@ -33,6 +34,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
+  const email =
+    typeof body.email === 'string' && body.email.trim()
+      ? body.email.trim().toLowerCase()
+      : currentEmail;
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const role = body.role as AdminRole;
   const active = body.active !== false;
@@ -42,6 +47,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       : undefined;
   const password = typeof body.password === 'string' ? body.password : undefined;
 
+  if (!email || !email.includes('@')) {
+    return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
+  }
   if (!name) {
     return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
   }
@@ -49,19 +57,20 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Rol inválido' }, { status: 400 });
   }
 
-  if (email === session.email && role !== 'administrador') {
+  if (currentEmail === session.email && role !== 'administrador') {
     return NextResponse.json(
       { error: 'No podés quitarte el rol de administrador a vos mismo.' },
       { status: 400 }
     );
   }
-  if (email === session.email && !active) {
+  if (currentEmail === session.email && !active) {
     return NextResponse.json({ error: 'No podés desactivarte a vos mismo.' }, { status: 400 });
   }
 
   try {
     const user = await upsertAdminUser({
       email,
+      currentEmail,
       name,
       role,
       active,
@@ -69,10 +78,30 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       password,
       createdBy: session.email,
     });
-    return NextResponse.json({ user });
+
+    const response = NextResponse.json({ user });
+    if (currentEmail === session.email && email !== currentEmail) {
+      setAdminSessionCookie(
+        response,
+        user.email,
+        session.secret,
+        user.role,
+        user.name,
+        user.reclamosWriteScope
+      );
+    }
+    return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error al guardar usuario';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status =
+      message.includes('ya existe') ||
+      message.includes('asociado') ||
+      message.includes('no encontrado') ||
+      message.includes('variables de entorno') ||
+      message.includes('Email inválido')
+        ? 400
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
