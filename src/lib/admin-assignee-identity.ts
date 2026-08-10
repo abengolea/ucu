@@ -121,14 +121,31 @@ export async function getAssigneeMatchContext(loginEmail: string): Promise<{
 }
 
 export function reclamoAssignedToIdentity(
-  reclamo: { responsable?: { email?: string; name?: string } | null },
+  reclamo: {
+    responsable?: { email?: string; name?: string } | null;
+    asignacionPendiente?: { email?: string; name?: string } | null;
+  },
   emails: string[],
   assigneeName?: string
 ): boolean {
+  const pendingEmail = normalizeAssigneeEmail(reclamo.asignacionPendiente?.email);
+  if (pendingEmail && emails.includes(pendingEmail)) return true;
+
   const assignedEmail = normalizeAssigneeEmail(reclamo.responsable?.email);
   if (assignedEmail && emails.includes(assignedEmail)) return true;
 
   const targetName = normalizePersonName(assigneeName);
+  const pendingName = normalizePersonName(reclamo.asignacionPendiente?.name);
+  if (targetName && pendingName && targetName === pendingName) return true;
+
   const assignedName = normalizePersonName(reclamo.responsable?.name);
   return Boolean(targetName && assignedName && targetName === assignedName);
+}
+
+export function reclamoPendingForIdentity(
+  reclamo: { asignacionPendiente?: { email?: string } | null },
+  emails: string[]
+): boolean {
+  const pendingEmail = normalizeAssigneeEmail(reclamo.asignacionPendiente?.email);
+  return Boolean(pendingEmail && emails.includes(pendingEmail));
 }

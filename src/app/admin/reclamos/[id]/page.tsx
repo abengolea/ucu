@@ -23,6 +23,7 @@ import {
   ReclamoResponsableCard,
 } from '@/components/admin/ReclamoDetailEditors';
 import { ReclamoEnlacesRapidos } from '@/components/admin/ReclamoEnlacesRapidos';
+import { RegistrarSinGestionModal } from '@/components/admin/RegistrarSinGestionModal';
 import { formatReclamoTitulo } from '@/lib/reclamos-display';
 
 export default function AdminReclamoDetailPage() {
@@ -30,11 +31,13 @@ export default function AdminReclamoDetailPage() {
   const reclamoId = params.id;
   const user = useAdminUser();
   const [canWrite, setCanWrite] = useState(false);
+  const [canDecideAsignacion, setCanDecideAsignacion] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [showRegistrarSinGestion, setShowRegistrarSinGestion] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reclamo, setReclamo] = useState<StoredReclamoDocument | null>(null);
   const [delegados, setDelegados] = useState<ReclamoDelegado[]>([]);
@@ -51,6 +54,7 @@ export default function AdminReclamoDetailPage() {
     'Solicitar documentación',
     'Resolución favorable',
     'Archivo del caso',
+    'Registrar sin gestión (Defensa del Consumidor)',
     'Personalizado',
   ];
   const [plantilla, setPlantilla] = useState(PLANTILLAS[0]);
@@ -79,6 +83,7 @@ export default function AdminReclamoDetailPage() {
         setEstadoId(String(data.reclamo.idCasoEstado));
       }
       setCanWrite(Boolean(data.canWrite));
+      setCanDecideAsignacion(Boolean(data.canDecideAsignacion));
       setDelegados(data.delegados || []);
       setEstados(data.estados || []);
       setGrupos(data.grupos || []);
@@ -129,6 +134,7 @@ export default function AdminReclamoDetailPage() {
   }, [estados]);
 
   const esRecibido = reclamo?.adminBandeja === 'recibidos';
+  const esEsperaAceptacion = reclamo?.adminBandeja === 'espera_aceptacion';
 
   function handleReclamoUpdated(updated: StoredReclamoDocument) {
     setReclamo(updated);
@@ -138,6 +144,7 @@ export default function AdminReclamoDetailPage() {
       .then((data) => {
         if (data.reclamo) setReclamo(data.reclamo);
         setCanWrite(Boolean(data.canWrite));
+        setCanDecideAsignacion(Boolean(data.canDecideAsignacion));
         setDelegados(data.delegados || []);
       })
       .catch(() => undefined);
@@ -331,6 +338,25 @@ export default function AdminReclamoDetailPage() {
 
   return (
     <div>
+      {showRegistrarSinGestion ? (
+        <RegistrarSinGestionModal
+          reclamo={{
+            id: reclamo.id,
+            nombre: formatReclamoTitulo(reclamo),
+            email: reclamo.denunciante.email,
+            ciudadNombre: reclamo.denunciante.ciudadNombre,
+            provinciaNombre: reclamo.denunciante.provinciaNombre,
+          }}
+          onClose={() => setShowRegistrarSinGestion(false)}
+          onDone={(result) => {
+            setShowRegistrarSinGestion(false);
+            void load();
+            if (result?.emailedTo) {
+              setError(null);
+            }
+          }}
+        />
+      ) : null}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/admin/reclamos" className="text-sm font-semibold text-[#1a5fb4] hover:underline">
@@ -364,19 +390,30 @@ export default function AdminReclamoDetailPage() {
             </button>
           ) : null}
           {canWrite && !esArchivado ? (
-            <button
-              type="button"
-              onClick={handleArchivar}
-              disabled={archiving}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-            >
-              {archiving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-              {archiving ? 'Archivando…' : 'Archivar'}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowRegistrarSinGestion(true)}
+                disabled={archiving}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                title="Archiva como denuncia registrada y avisa al consumidor por email"
+              >
+                Registrar sin gestión
+              </button>
+              <button
+                type="button"
+                onClick={handleArchivar}
+                disabled={archiving}
+                className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {archiving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Archive className="h-4 w-4" />
+                )}
+                {archiving ? 'Archivando…' : 'Archivar'}
+              </button>
+            </>
           ) : null}
         </div>
       </div>
@@ -501,6 +538,7 @@ export default function AdminReclamoDetailPage() {
           <ReclamoResponsableCard
             reclamo={reclamo}
             delegados={delegados}
+            canDecideAsignacion={canDecideAsignacion}
             {...editorProps}
           />
 
@@ -512,6 +550,7 @@ export default function AdminReclamoDetailPage() {
                   value={estadoId}
                   onChange={(e) => setEstadoId(e.target.value)}
                   className="field-input"
+                  disabled={esEsperaAceptacion}
                 >
                   {grupos.map((grupo) => {
                     const opciones = estadosPorGrupo.get(grupo.id) ?? [];
@@ -533,11 +572,12 @@ export default function AdminReclamoDetailPage() {
                   rows={2}
                   placeholder="Nota opcional para el historial…"
                   className="field-input mb-3 mt-4"
+                  disabled={esEsperaAceptacion}
                 />
                 <button
                   type="button"
                   onClick={handleSaveEstado}
-                  disabled={saving || esRecibido}
+                  disabled={saving || esRecibido || esEsperaAceptacion}
                   className="w-full rounded-lg bg-[#1a5fb4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#004a80] disabled:opacity-60"
                 >
                   {saving ? 'Guardando…' : 'Actualizar estado'}
@@ -545,6 +585,12 @@ export default function AdminReclamoDetailPage() {
                 {esRecibido ? (
                   <p className="mt-3 text-xs text-slate-500">
                     Primero iniciá la gestión para asignarte el caso y avanzar el workflow.
+                  </p>
+                ) : null}
+                {esEsperaAceptacion ? (
+                  <p className="mt-3 text-xs text-amber-700">
+                    Hay una asignación pendiente de aceptación. Cuando el delegado acepte o
+                    rechace, vas a poder avanzar el estado.
                   </p>
                 ) : null}
               </>
@@ -566,11 +612,13 @@ export default function AdminReclamoDetailPage() {
 function BandejaBadge({ bandeja }: { bandeja: ReclamoAdminBandeja }) {
   const styles: Record<ReclamoAdminBandeja, string> = {
     recibidos: 'bg-amber-100 text-amber-800',
+    espera_aceptacion: 'bg-orange-100 text-orange-900',
     gestion: 'bg-sky-100 text-sky-800',
     archivados: 'bg-slate-100 text-slate-700',
   };
   const labels: Record<ReclamoAdminBandeja, string> = {
     recibidos: 'Recibido',
+    espera_aceptacion: 'Espera aceptación',
     gestion: 'En gestión',
     archivados: 'Archivado',
   };

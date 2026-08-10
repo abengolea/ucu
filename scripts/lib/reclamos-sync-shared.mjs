@@ -19,6 +19,7 @@ export function titleCase(value) {
 
 export function computeAdminBandeja(doc) {
   if (doc.idGrupoEstado === 3) return 'archivados';
+  if (doc.asignacionPendiente?.email) return 'espera_aceptacion';
   if (doc.idCasoEstado === 1 && !doc.responsable) return 'recibidos';
   return 'gestion';
 }

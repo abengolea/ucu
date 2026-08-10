@@ -80,7 +80,20 @@ export type ReclamoTipo = {
   activo: boolean;
 };
 
-export type ReclamoAdminBandeja = 'recibidos' | 'gestion' | 'archivados';
+export type ReclamoAdminBandeja =
+  | 'recibidos'
+  | 'espera_aceptacion'
+  | 'gestion'
+  | 'archivados';
+
+/** Asignación propuesta a un delegado, pendiente de aceptar/rechazar. */
+export type ReclamoAsignacionPendiente = {
+  email: string;
+  name: string;
+  proposedAt: string;
+  proposedByEmail: string;
+  proposedByName: string;
+};
 
 export type ReclamoHistorialEstado = {
   idCasoEstado: number;
@@ -161,6 +174,8 @@ export type StoredReclamoDocument = {
   idGrupoEstado?: number;
   adminBandeja?: ReclamoAdminBandeja;
   responsable?: ReclamoResponsable | null;
+  /** Propuesta de asignación; mientras exista, la bandeja es `espera_aceptacion`. */
+  asignacionPendiente?: ReclamoAsignacionPendiente | null;
   historialEstados?: ReclamoHistorialEstado[];
   comentarios?: ReclamoComentario[];
   comunicaciones?: ReclamoComunicacion[];

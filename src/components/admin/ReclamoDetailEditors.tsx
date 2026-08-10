@@ -150,13 +150,21 @@ export function ReclamoResponsableCard({
   reclamo,
   delegados,
   canWrite,
+  canDecideAsignacion = false,
   reclamoId,
   onUpdated,
-}: EditorProps & { reclamo: StoredReclamoDocument; delegados: ReclamoDelegado[] }) {
+}: EditorProps & {
+  reclamo: StoredReclamoDocument;
+  delegados: ReclamoDelegado[];
+  canDecideAsignacion?: boolean;
+}) {
+  const pendiente = reclamo.asignacionPendiente ?? null;
   const [selectedEmail, setSelectedEmail] = useState(reclamo.responsable?.email ?? '');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deciding, setDeciding] = useState(false);
+  const [rejectMotivo, setRejectMotivo] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const selectedDelegado = useMemo(
@@ -176,7 +184,7 @@ export function ReclamoResponsableCard({
     setSelectedEmail(reclamo.responsable?.email ?? '');
     setQuery('');
     setOpen(false);
-  }, [reclamo.responsable?.email]);
+  }, [reclamo.responsable?.email, pendiente?.email]);
 
   function selectDelegado(delegado: ReclamoDelegado) {
     setSelectedEmail(delegado.email);
@@ -205,12 +213,101 @@ export function ReclamoResponsableCard({
     }
   }
 
-  const changed = selectedEmail !== (reclamo.responsable?.email ?? '');
+  async function patchAsignacion(body: Record<string, unknown>) {
+    setDeciding(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/reclamos/${reclamoId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la asignación');
+      if (data.reclamo) onUpdated(data.reclamo);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado');
+    } finally {
+      setDeciding(false);
+    }
+  }
+
+  const pendingEmail = pendiente?.email ?? '';
+  const changed =
+    selectedEmail !== (reclamo.responsable?.email ?? '') &&
+    selectedEmail !== pendingEmail;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-bold text-slate-900">Responsable</h2>
-      {reclamo.responsable ? (
+
+      {pendiente ? (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-900">Espera aceptación</p>
+          <p className="mt-1 font-semibold text-slate-900">{pendiente.name}</p>
+          <p className="text-sm text-slate-500">{pendiente.email}</p>
+          <p className="mt-2 text-xs text-slate-500">
+            Propuesto por {pendiente.proposedByName} el{' '}
+            {format(new Date(pendiente.proposedAt), "d MMM yyyy HH:mm", { locale: es })}
+          </p>
+          {reclamo.responsable ? (
+            <p className="mt-2 text-xs text-slate-600">
+              Responsable actual (sigue vigente hasta que se acepte):{' '}
+              <strong>{reclamo.responsable.name}</strong>
+            </p>
+          ) : null}
+
+          {canDecideAsignacion ? (
+            <div className="mt-4 space-y-3 border-t border-amber-200 pt-3">
+              <p className="text-sm text-amber-900">
+                Te asignaron este caso. Aceptalo para tomarlo o rechazalo para devolverlo al equipo.
+              </p>
+              <textarea
+                value={rejectMotivo}
+                onChange={(e) => setRejectMotivo(e.target.value)}
+                rows={2}
+                placeholder="Motivo del rechazo (opcional)…"
+                className="field-input w-full"
+              />
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => patchAsignacion({ aceptarAsignacion: true })}
+                  disabled={deciding}
+                  className="w-full rounded-lg bg-[#2d8f47] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f6b31] disabled:opacity-50"
+                >
+                  {deciding ? 'Guardando…' : 'Aceptar caso'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    patchAsignacion({
+                      rechazarAsignacion: true,
+                      motivo: rejectMotivo.trim() || undefined,
+                    })
+                  }
+                  disabled={deciding}
+                  className="w-full rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Rechazar asignación
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {canWrite && !canDecideAsignacion ? (
+            <button
+              type="button"
+              onClick={() => patchAsignacion({ cancelarAsignacion: true })}
+              disabled={deciding}
+              className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+            >
+              {deciding ? 'Cancelando…' : 'Cancelar propuesta'}
+            </button>
+          ) : null}
+        </div>
+      ) : reclamo.responsable ? (
         <div className="mb-4">
           <p className="font-semibold text-slate-900">{reclamo.responsable.name}</p>
           <p className="text-sm text-slate-500">{reclamo.responsable.email}</p>
@@ -226,10 +323,12 @@ export function ReclamoResponsableCard({
         </p>
       )}
 
+      {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+
       {canWrite && delegados.length > 0 ? (
         <div className="border-t border-slate-100 pt-4">
           <label className="block text-sm font-semibold text-slate-700">
-            {reclamo.responsable ? 'Reasignar a' : 'Asignar a'}
+            {pendiente || reclamo.responsable ? 'Reasignar a' : 'Asignar a'}
             <div className="relative mt-1">
               <input
                 type="text"
@@ -279,14 +378,21 @@ export function ReclamoResponsableCard({
               Seleccionado: <strong>{selectedDelegado.name}</strong>
             </p>
           ) : null}
-          {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+          <p className="mt-2 text-xs text-slate-500">
+            El delegado deberá aceptar o rechazar. Mientras tanto el caso queda en &quot;Espera
+            aceptación&quot; y te avisamos por email cuando decida.
+          </p>
           <button
             type="button"
             onClick={handleReasignar}
-            disabled={!selectedEmail || !changed || saving}
+            disabled={!selectedEmail || !changed || saving || deciding}
             className="mt-3 w-full rounded-lg border border-[#1a5fb4] px-4 py-2 text-sm font-semibold text-[#1a5fb4] hover:bg-[#1a5fb4]/5 disabled:opacity-50"
           >
-            {saving ? 'Reasignando…' : reclamo.responsable ? 'Reasignar caso' : 'Asignar caso'}
+            {saving
+              ? 'Asignando…'
+              : pendiente || reclamo.responsable
+                ? 'Proponer reasignación'
+                : 'Asignar caso'}
           </button>
         </div>
       ) : null}

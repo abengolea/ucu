@@ -4,20 +4,53 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Archive, Loader2 } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
-import type { ReclamoAdminBandeja, ReclamoResponsable } from '@/types/reclamos';
+import {
+  QuickEditEmpresasButton,
+  ReclamoEmpresasQuickEdit,
+} from '@/components/admin/ReclamoEmpresasQuickEdit';
+import { RegistrarSinGestionModal } from '@/components/admin/RegistrarSinGestionModal';
+import type {
+  ReclamoAdminBandeja,
+  ReclamoAsignacionPendiente,
+  ReclamoCiudad,
+  ReclamoProvincia,
+  ReclamoResponsable,
+} from '@/types/reclamos';
 
 export type AdminReclamoListItem = {
   id: number;
   nombre: string;
+  email?: string | null;
+  provinciaId?: number | null;
+  ciudadId?: number | null;
+  ciudadNombre?: string | null;
+  provinciaNombre?: string | null;
   resumen: string;
   hecho?: string;
   estadoDescripcion?: string;
   idGrupoEstado?: number;
   adminBandeja?: ReclamoAdminBandeja;
   responsable?: ReclamoResponsable | null;
+  asignacionPendiente?: ReclamoAsignacionPendiente | null;
   createdAt: string;
+  empresaIds?: number[];
   empresas: { id: number; nombre: string; cuit?: string | null }[];
+  otrasEmpresas?: string | null;
 };
+
+function formatLocalidad(reclamo: AdminReclamoListItem): string {
+  const ciudad = reclamo.ciudadNombre?.trim();
+  const provincia = reclamo.provinciaNombre?.trim();
+  if (ciudad && provincia) return `${ciudad}, ${provincia}`;
+  return ciudad || provincia || '—';
+}
+
+function formatEmpresas(reclamo: AdminReclamoListItem): string {
+  const nombres = reclamo.empresas.map((e) => e.nombre.trim()).filter(Boolean);
+  const otras = reclamo.otrasEmpresas?.trim();
+  if (otras) nombres.push(otras);
+  return nombres.length ? nombres.join(' · ') : '—';
+}
 
 type BandejaCounts = Record<ReclamoAdminBandeja, number>;
 
@@ -31,6 +64,7 @@ type AdminReclamosListProps = {
 
 const tabs: { id: ReclamoAdminBandeja | 'todos'; label: string }[] = [
   { id: 'recibidos', label: 'Recibidos' },
+  { id: 'espera_aceptacion', label: 'Espera aceptación' },
   { id: 'gestion', label: 'En gestión' },
   { id: 'archivados', label: 'Archivados' },
   { id: 'todos', label: 'Todos' },
@@ -40,6 +74,19 @@ function grupoBadgeClass(idGrupoEstado?: number): string {
   if (idGrupoEstado === 3) return 'bg-slate-100 text-slate-700';
   if (idGrupoEstado === 2) return 'bg-purple-100 text-purple-800';
   return 'bg-sky-100 text-sky-800';
+}
+
+function estadoBadge(reclamo: AdminReclamoListItem): { label: string; className: string } {
+  if (reclamo.adminBandeja === 'espera_aceptacion') {
+    return { label: 'Espera aceptación', className: 'bg-orange-100 text-orange-900' };
+  }
+  if (reclamo.adminBandeja === 'recibidos') {
+    return { label: 'Recibido', className: 'bg-amber-100 text-amber-800' };
+  }
+  return {
+    label: reclamo.estadoDescripcion?.trim() || 'Consulta',
+    className: grupoBadgeClass(reclamo.idGrupoEstado),
+  };
 }
 
 export function AdminReclamosList({
@@ -58,17 +105,29 @@ export function AdminReclamosList({
   );
   const [responsableInput, setResponsableInput] = useState('');
   const [responsableQuery, setResponsableQuery] = useState('');
+  const [provinciaId, setProvinciaId] = useState('');
+  const [ciudadId, setCiudadId] = useState('');
+  const [provincias, setProvincias] = useState<ReclamoProvincia[]>([]);
+  const [ciudades, setCiudades] = useState<ReclamoCiudad[]>([]);
   const [reclamos, setReclamos] = useState<AdminReclamoListItem[]>([]);
-  const [counts, setCounts] = useState<BandejaCounts>({ recibidos: 0, gestion: 0, archivados: 0 });
+  const [counts, setCounts] = useState<BandejaCounts>({
+    recibidos: 0,
+    espera_aceptacion: 0,
+    gestion: 0,
+    archivados: 0,
+  });
   const [assignedCount, setAssignedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [editingEmpresasId, setEditingEmpresasId] = useState<number | null>(null);
+  const [registrarTarget, setRegistrarTarget] = useState<AdminReclamoListItem | null>(null);
 
   const filterByResponsable = mode === 'all' && Boolean(responsableQuery);
+  const filterByLocation = Boolean(provinciaId) || Boolean(ciudadId);
   const apiBandeja: ReclamoAdminBandeja | 'todos' =
-    mode === 'assigned' || filterByResponsable ? 'todos' : bandeja;
+    mode === 'assigned' || filterByResponsable || filterByLocation ? 'todos' : bandeja;
 
   useEffect(() => {
     if (mode !== 'all') return;
@@ -85,11 +144,41 @@ export function AdminReclamosList({
     }
   }, [responsableQuery, bandeja]);
 
+  useEffect(() => {
+    if (filterByLocation && bandeja === 'recibidos') {
+      setBandeja('todos');
+    }
+  }, [filterByLocation, bandeja]);
+
+  useEffect(() => {
+    fetch('/api/reclamos/catalogos/provincias')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ReclamoProvincia[]) => setProvincias(Array.isArray(data) ? data : []))
+      .catch(() => setProvincias([]));
+  }, []);
+
+  useEffect(() => {
+    if (!provinciaId) {
+      setCiudades([]);
+      setCiudadId('');
+      return;
+    }
+    setCiudadId('');
+    fetch(`/api/reclamos/catalogos/ciudades?idProvincia=${encodeURIComponent(provinciaId)}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ReclamoCiudad[]) => setCiudades(Array.isArray(data) ? data : []))
+      .catch(() => setCiudades([]));
+  }, [provinciaId]);
+
   function canArchiveReclamo(reclamo: AdminReclamoListItem): boolean {
     if (!canWriteReclamos || reclamo.adminBandeja === 'archivados') return false;
     if (writeScopeAll) return true;
     const email = reclamo.responsable?.email?.toLowerCase();
     return Boolean(email && email === user.email.toLowerCase());
+  }
+
+  function canEditEmpresas(reclamo: AdminReclamoListItem): boolean {
+    return canArchiveReclamo(reclamo) || (canWriteReclamos && writeScopeAll);
   }
 
   async function handleArchivar(reclamo: AdminReclamoListItem) {
@@ -120,6 +209,7 @@ export function AdminReclamosList({
     }
   }
 
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -130,12 +220,16 @@ export function AdminReclamosList({
       } else if (responsableQuery) {
         params.set('responsable', responsableQuery);
       }
+      if (provinciaId) params.set('provinciaId', provinciaId);
+      if (ciudadId) params.set('ciudadId', ciudadId);
 
       const res = await fetch(`/api/admin/reclamos?${params.toString()}`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
       setReclamos(data.reclamos || []);
-      setCounts(data.counts || { recibidos: 0, gestion: 0, archivados: 0 });
+      setCounts(
+        data.counts || { recibidos: 0, espera_aceptacion: 0, gestion: 0, archivados: 0 }
+      );
       setAssignedCount(Number(data.assignedCount) || 0);
     } catch (err) {
       setReclamos([]);
@@ -143,36 +237,50 @@ export function AdminReclamosList({
     } finally {
       setLoading(false);
     }
-  }, [mode, apiBandeja, responsableQuery]);
+  }, [mode, apiBandeja, responsableQuery, provinciaId, ciudadId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const clientBandejaSource = mode === 'assigned' || filterByResponsable ? reclamos : [];
+  const clientBandejaSource =
+    mode === 'assigned' || filterByResponsable || filterByLocation ? reclamos : [];
   const bandejaCounts =
-    mode === 'assigned' || filterByResponsable
+    mode === 'assigned' || filterByResponsable || filterByLocation
       ? {
           recibidos: clientBandejaSource.filter((item) => item.adminBandeja === 'recibidos').length,
+          espera_aceptacion: clientBandejaSource.filter(
+            (item) => item.adminBandeja === 'espera_aceptacion'
+          ).length,
           gestion: clientBandejaSource.filter((item) => item.adminBandeja === 'gestion').length,
-          archivados: clientBandejaSource.filter((item) => item.adminBandeja === 'archivados').length,
+          archivados: clientBandejaSource.filter((item) => item.adminBandeja === 'archivados')
+            .length,
         }
       : counts;
 
   const visibleReclamos =
-    (mode === 'assigned' || filterByResponsable) && bandeja !== 'todos'
+    (mode === 'assigned' || filterByResponsable || filterByLocation) && bandeja !== 'todos'
       ? reclamos.filter((item) => item.adminBandeja === bandeja)
       : reclamos;
 
   const filtered = visibleReclamos.filter((item) => {
-    const empresas = item.empresas.map((e) => e.nombre).join(' ');
     const haystack =
-      `${item.id} ${item.nombre} ${item.resumen} ${item.hecho ?? ''} ${item.estadoDescripcion ?? ''} ${empresas} ${item.responsable?.name ?? ''}`.toLowerCase();
+      `${item.id} ${item.nombre} ${formatLocalidad(item)} ${item.resumen} ${item.hecho ?? ''} ${item.estadoDescripcion ?? ''} ${formatEmpresas(item)} ${item.responsable?.name ?? ''}`.toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
 
   return (
     <div>
+      {registrarTarget ? (
+        <RegistrarSinGestionModal
+          reclamo={registrarTarget}
+          onClose={() => setRegistrarTarget(null)}
+          onDone={async () => {
+            setRegistrarTarget(null);
+            await load();
+          }}
+        />
+      ) : null}
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
@@ -205,7 +313,10 @@ export function AdminReclamosList({
         {tabs.map((item) => {
           const count =
             item.id === 'todos'
-              ? bandejaCounts.recibidos + bandejaCounts.gestion + bandejaCounts.archivados
+              ? bandejaCounts.recibidos +
+                bandejaCounts.espera_aceptacion +
+                bandejaCounts.gestion +
+                bandejaCounts.archivados
               : bandejaCounts[item.id];
           return (
             <button
@@ -232,6 +343,37 @@ export function AdminReclamosList({
           placeholder="Buscar por número, nombre, empresa o resumen…"
           className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
         />
+        <label className="flex w-full max-w-[200px] flex-col gap-1 text-sm text-slate-600">
+          <span className="font-semibold text-slate-700">Provincia</span>
+          <select
+            value={provinciaId}
+            onChange={(e) => setProvinciaId(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+          >
+            <option value="">Todas</option>
+            {provincias.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex w-full max-w-[220px] flex-col gap-1 text-sm text-slate-600">
+          <span className="font-semibold text-slate-700">Ciudad</span>
+          <select
+            value={ciudadId}
+            onChange={(e) => setCiudadId(e.target.value)}
+            disabled={!provinciaId}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4] disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            <option value="">{provinciaId ? 'Todas' : 'Elegí provincia…'}</option>
+            {ciudades.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
         {mode === 'all' ? (
           <label className="flex w-full max-w-xs flex-col gap-1 text-sm text-slate-600">
             <span className="font-semibold text-slate-700">Responsable</span>
@@ -242,6 +384,18 @@ export function AdminReclamosList({
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
             />
           </label>
+        ) : null}
+        {filterByLocation ? (
+          <button
+            type="button"
+            onClick={() => {
+              setProvinciaId('');
+              setCiudadId('');
+            }}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Limpiar ubicación
+          </button>
         ) : null}
       </div>
 
@@ -262,21 +416,23 @@ export function AdminReclamosList({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-          <table className="w-full table-fixed text-left text-sm">
+          <table className="w-full min-w-[1100px] text-left text-sm">
             <colgroup>
               <col className="w-[72px]" />
               <col className="w-[160px]" />
-              <col className="w-[120px]" />
+              <col className="w-[140px]" />
+              <col className="w-[220px]" />
               <col />
-              <col className="w-[100px]" />
+              <col className="w-[110px]" />
               {mode === 'all' ? <col className="w-[120px]" /> : null}
               <col className="w-[96px]" />
-              <col className="w-[120px]" />
+              <col className="w-[130px]" />
             </colgroup>
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-semibold">Nº</th>
                 <th className="px-4 py-3 font-semibold">Denunciante</th>
+                <th className="px-4 py-3 font-semibold">Localidad</th>
                 <th className="px-4 py-3 font-semibold">Empresa</th>
                 <th className="px-4 py-3 font-semibold">Hechos</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
@@ -292,8 +448,33 @@ export function AdminReclamosList({
                 <tr key={reclamo.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80">
                   <td className="px-4 py-3 align-top font-medium text-slate-900">{reclamo.id}</td>
                   <td className="px-4 py-3 align-top text-slate-700">{reclamo.nombre}</td>
-                  <td className="truncate px-4 py-3 align-top text-slate-600" title={reclamo.empresas[0]?.nombre}>
-                    {reclamo.empresas[0]?.nombre ?? '—'}
+                  <td className="px-4 py-3 align-top text-slate-600">
+                    <span className="whitespace-normal break-words">{formatLocalidad(reclamo)}</span>
+                  </td>
+                  <td className="px-4 py-3 align-top text-slate-700">
+                    {editingEmpresasId === reclamo.id ? (
+                      <ReclamoEmpresasQuickEdit
+                        reclamo={reclamo}
+                        onClose={() => setEditingEmpresasId(null)}
+                        onSaved={async () => {
+                          setEditingEmpresasId(null);
+                          await load();
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <span className="whitespace-normal break-words leading-snug">
+                          {formatEmpresas(reclamo)}
+                        </span>
+                        {canEditEmpresas(reclamo) ? (
+                          <div>
+                            <QuickEditEmpresasButton
+                              onClick={() => setEditingEmpresasId(reclamo.id)}
+                            />
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-top text-slate-700">
                     {reclamo.resumen ? (
@@ -302,15 +483,26 @@ export function AdminReclamosList({
                     <p className="whitespace-pre-wrap leading-relaxed">{reclamo.hecho || '—'}</p>
                   </td>
                   <td className="px-4 py-3 align-top">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${grupoBadgeClass(reclamo.idGrupoEstado)}`}
-                    >
-                      {reclamo.estadoDescripcion ?? 'Consulta'}
-                    </span>
+                    {(() => {
+                      const badge = estadoBadge(reclamo);
+                      return (
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   {mode === 'all' ? (
                     <td className="px-4 py-3 align-top text-slate-600">
-                      {reclamo.responsable?.name ?? (
+                      {reclamo.asignacionPendiente ? (
+                        <span className="text-orange-800">
+                          Pendiente: {reclamo.asignacionPendiente.name}
+                        </span>
+                      ) : reclamo.responsable?.name ? (
+                        reclamo.responsable.name
+                      ) : (
                         <span className="text-amber-700">Sin asignar</span>
                       )}
                     </td>
@@ -324,24 +516,36 @@ export function AdminReclamosList({
                         href={`/admin/reclamos/${reclamo.id}`}
                         className="font-semibold text-[#1a5fb4] hover:underline"
                       >
-                        {mode === 'assigned' || reclamo.adminBandeja !== 'recibidos'
-                          ? 'Gestionar'
-                          : 'Tomar'}
+                        {reclamo.adminBandeja === 'espera_aceptacion'
+                          ? 'Revisar'
+                          : mode === 'assigned' || reclamo.adminBandeja !== 'recibidos'
+                            ? 'Gestionar'
+                            : 'Tomar'}
                       </Link>
                       {canArchiveReclamo(reclamo) ? (
-                        <button
-                          type="button"
-                          onClick={() => handleArchivar(reclamo)}
-                          disabled={archivingId === reclamo.id}
-                          className="flex items-center gap-1 text-left text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-60"
-                        >
-                          {archivingId === reclamo.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Archive className="h-3 w-3" />
-                          )}
-                          Archivar
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setRegistrarTarget(reclamo)}
+                            disabled={archivingId === reclamo.id}
+                            className="text-left text-xs font-semibold text-amber-800 hover:text-amber-950 disabled:opacity-60"
+                          >
+                            Registrar sin gestión
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleArchivar(reclamo)}
+                            disabled={archivingId === reclamo.id}
+                            className="flex items-center gap-1 text-left text-xs font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-60"
+                          >
+                            {archivingId === reclamo.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Archive className="h-3 w-3" />
+                            )}
+                            Archivar
+                          </button>
+                        </>
                       ) : null}
                     </div>
                   </td>

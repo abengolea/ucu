@@ -10,9 +10,13 @@ export const RECLAMO_ESTADO_CARTA_DOCUMENTO = 2;
 export const RECLAMO_GRUPO_ARCHIVADO = 3;
 
 export function computeAdminBandeja(
-  doc: Pick<StoredReclamoDocument, 'idCasoEstado' | 'idGrupoEstado' | 'responsable'>
+  doc: Pick<
+    StoredReclamoDocument,
+    'idCasoEstado' | 'idGrupoEstado' | 'responsable' | 'asignacionPendiente'
+  >
 ): ReclamoAdminBandeja {
   if (doc.idGrupoEstado === RECLAMO_GRUPO_ARCHIVADO) return 'archivados';
+  if (doc.asignacionPendiente?.email) return 'espera_aceptacion';
   if (doc.idCasoEstado === RECLAMO_ESTADO_CONSULTA && !doc.responsable) return 'recibidos';
   return 'gestion';
 }

@@ -1,9 +1,11 @@
 import 'server-only';
 
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { buildReclamoDocumentFromForm, resolveEmpresaRefs, type ReclamoCatalogLookups } from '@/lib/reclamos-normalize';
 import { normalizeExternalUrl } from '@/lib/reclamos-display';
 import type {
+  ReclamoAsignacionPendiente,
   ReclamoCiudad,
   ReclamoComunicacion,
   ReclamoDatosUpdate,
@@ -28,6 +30,13 @@ import {
   RECLAMO_ESTADO_CONSULTA,
   resolveArchivadoEstado,
 } from '@/lib/reclamos-admin';
+import {
+  notifyAsignacionAceptada,
+  notifyAsignacionPropuesta,
+  notifyAsignacionRechazada,
+} from '@/lib/reclamos-asignacion-email';
+import { buildRegistrarSinGestionEmail } from '@/lib/reclamos-registrar-sin-gestion';
+import { sendEmail } from '@/lib/email';
 import { reclamoAssignedToIdentity } from '@/lib/admin-assignee-identity';
 
 const CATALOG_COLLECTIONS: Record<ReclamosCatalogType, string> = {
@@ -113,7 +122,9 @@ async function loadEmpresasCatalogCached(): Promise<ReclamoEmpresa[]> {
   if (empresasCatalogCache && now - empresasCatalogCache.loadedAt < EMPRESAS_CACHE_TTL_MS) {
     return empresasCatalogCache.items;
   }
-  const items = await readCatalog<ReclamoEmpresa>(CATALOG_COLLECTIONS.empresas);
+  const items = (await readCatalog<ReclamoEmpresa>(CATALOG_COLLECTIONS.empresas)).filter(
+    (empresa) => empresa.activo !== false
+  );
   empresasCatalogCache = { loadedAt: now, items };
   return items;
 }
@@ -252,6 +263,8 @@ export type ListAdminReclamosOptions = {
   unassignedOnly?: boolean;
   /** Búsqueda libre por nombre o email del responsable. */
   responsableQuery?: string;
+  provinciaId?: number;
+  ciudadId?: number;
 };
 
 async function countReclamosByQuery(
@@ -271,7 +284,12 @@ export async function countAdminReclamosRecibidos(): Promise<number> {
 /** Conteos por bandeja vía aggregation (≈1 lectura / 1000 matches), sin full-scan. */
 export async function countAdminReclamosByBandeja(): Promise<AdminReclamoCounts> {
   const db = dbOrThrow();
-  const bandejas: ReclamoAdminBandeja[] = ['recibidos', 'gestion', 'archivados'];
+  const bandejas: ReclamoAdminBandeja[] = [
+    'recibidos',
+    'espera_aceptacion',
+    'gestion',
+    'archivados',
+  ];
 
   const entries = await Promise.all(
     bandejas.map(async (bandeja) => {
@@ -284,6 +302,7 @@ export async function countAdminReclamosByBandeja(): Promise<AdminReclamoCounts>
 
   return {
     recibidos: 0,
+    espera_aceptacion: 0,
     gestion: 0,
     archivados: 0,
     ...Object.fromEntries(entries),
@@ -317,7 +336,7 @@ function matchesResponsableQuery(
   return name.includes(q) || email.includes(q);
 }
 
-/** Conteo asignados por email (aggregation). El match por nombre legacy queda fuera a propósito. */
+/** Conteo asignados por email (aggregation). Incluye propuestas pendientes. */
 export async function countAssignedReclamos(
   loginEmail: string,
   _assigneeName?: string
@@ -328,11 +347,14 @@ export async function countAssignedReclamos(
 
   const db = dbOrThrow();
   const counts = await Promise.all(
-    emails.map((email) =>
+    emails.flatMap((email) => [
       countReclamosByQuery(
         db.collection('reclamos').where('responsable.email', '==', email)
-      )
-    )
+      ),
+      countReclamosByQuery(
+        db.collection('reclamos').where('asignacionPendiente.email', '==', email)
+      ),
+    ])
   );
 
   return counts.reduce((sum, n) => sum + n, 0);
@@ -352,10 +374,16 @@ export async function listAdminReclamos(
     assigneeName,
     unassignedOnly = false,
     responsableQuery,
+    provinciaId,
+    ciudadId,
   } = options;
   const responsableQ = responsableQuery?.trim() ?? '';
+  const locationFilter = Boolean(provinciaId) || Boolean(ciudadId);
   const identityFilter =
-    Boolean(assignedToEmails?.length) || unassignedOnly || Boolean(responsableQ);
+    Boolean(assignedToEmails?.length) ||
+    unassignedOnly ||
+    Boolean(responsableQ) ||
+    locationFilter;
   const fetchLimit = identityFilter
     ? Math.max(limit, 5000)
     : bandeja === 'todos'
@@ -390,6 +418,13 @@ export async function listAdminReclamos(
 
   if (responsableQ) {
     items = items.filter((item) => matchesResponsableQuery(item, responsableQ));
+  }
+
+  if (provinciaId) {
+    items = items.filter((item) => item.denunciante?.provinciaId === provinciaId);
+  }
+  if (ciudadId) {
+    items = items.filter((item) => item.denunciante?.ciudadId === ciudadId);
   }
 
   items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -431,6 +466,7 @@ export async function updateReclamoEstado(
     idCasoEstado,
     idGrupoEstado,
     responsable: current.responsable,
+    asignacionPendiente: current.asignacionPendiente,
   });
 
   await ref.set(patch, { merge: true });
@@ -456,9 +492,86 @@ export async function archivarReclamo(
     motivo
   );
 
+  // Al archivar, cae cualquier propuesta pendiente.
+  await dbOrThrow()
+    .collection('reclamos')
+    .doc(String(id))
+    .set({ asignacionPendiente: FieldValue.delete() }, { merge: true });
+
   const fresh = await getReclamoByIdFromFirestore(id);
   if (!fresh) throw new Error('Reclamo no encontrado');
   return fresh;
+}
+
+export type RegistrarSinGestionOptions = {
+  /** Motivo corto para historial interno */
+  motivo?: string;
+  /** Si vienen, se usan en el mail (borrador revisado por el operador / IA) */
+  subject?: string;
+  body?: string;
+  viaIA?: boolean;
+};
+
+/**
+ * Registra la denuncia, archiva sin gestión individual y avisa al consumidor
+ * recomendando Defensa del Consumidor en su ciudad.
+ */
+export async function registrarSinGestionReclamo(
+  id: number,
+  operator: { email: string; name: string },
+  options: RegistrarSinGestionOptions | string = {}
+): Promise<{ reclamo: StoredReclamoDocument; emailedTo: string }> {
+  // Compat: antes se pasaba solo el motivo como string.
+  const opts: RegistrarSinGestionOptions =
+    typeof options === 'string' ? { motivo: options } : options;
+
+  const current = await getReclamoByIdFromFirestore(id);
+  if (!current) throw new Error('Reclamo no encontrado');
+  if (current.adminBandeja === 'archivados' || current.idGrupoEstado === 3) {
+    throw new Error('El reclamo ya está archivado');
+  }
+
+  const to = current.denunciante.email?.trim();
+  if (!to || !to.includes('@')) {
+    throw new Error('El denunciante no tiene un email válido para avisar');
+  }
+
+  const customSubject = opts.subject?.trim();
+  const customBody = opts.body?.trim();
+  const drafted =
+    customSubject && customBody
+      ? { subject: customSubject, body: customBody }
+      : buildRegistrarSinGestionEmail({
+          reclamo: current,
+          motivoPublico: opts.motivo,
+        });
+
+  await sendEmail({
+    to,
+    subject: drafted.subject,
+    body: drafted.body,
+    reclamoId: id,
+  });
+
+  const historialMotivo = opts.motivo?.trim()
+    ? `Registrado sin gestión — ${opts.motivo.trim()} (mail enviado a ${to})`
+    : `Registrado sin gestión — mail enviado a ${to}`;
+
+  const reclamo = await archivarReclamo(id, operator, historialMotivo);
+
+  await addReclamoComunicacion(id, {
+    direction: 'outbound',
+    to,
+    subject: drafted.subject,
+    body: drafted.body,
+    sentAt: new Date().toISOString(),
+    sentByEmail: operator.email,
+    sentByName: operator.name,
+    viaIA: opts.viaIA === true,
+  });
+
+  const fresh = await getReclamoByIdFromFirestore(id);
+  return { reclamo: fresh ?? reclamo, emailedTo: to };
 }
 
 export async function iniciarGestionReclamo(
@@ -507,18 +620,20 @@ export async function iniciarGestionReclamo(
     }
   }
 
-  const updated: Partial<StoredReclamoDocument> = {
+  const updated: Record<string, unknown> = {
     responsable,
     idCasoEstado,
     estadoDescripcion,
     idGrupoEstado,
     historialEstados: historial,
+    asignacionPendiente: FieldValue.delete(),
     updatedAt: new Date().toISOString(),
   };
   updated.adminBandeja = computeAdminBandeja({
     idCasoEstado,
     idGrupoEstado,
     responsable,
+    asignacionPendiente: null,
   });
 
   await ref.set(updated, { merge: true });
@@ -588,10 +703,16 @@ export async function createReclamoFromPublicForm(
   return doc;
 }
 
-export async function reasignarReclamo(
+function sameEmail(a?: string | null, b?: string | null): boolean {
+  return Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
+}
+
+async function applyResponsableInmediato(
   id: number,
   assignee: { email: string; name: string },
-  operator: { email: string; name: string }
+  operator: { email: string; name: string },
+  nota: string,
+  estados?: ReclamoEstado[]
 ): Promise<StoredReclamoDocument> {
   const db = dbOrThrow();
   const ref = db.collection('reclamos').doc(String(id));
@@ -600,7 +721,6 @@ export async function reasignarReclamo(
 
   const current = snap.data() as StoredReclamoDocument;
   const historial = current.historialEstados ?? [];
-  const prevName = current.responsable?.name ?? 'sin asignar';
   const responsable = buildResponsable(assignee.email, assignee.name);
 
   historial.push(
@@ -609,19 +729,246 @@ export async function reasignarReclamo(
       current.estadoDescripcion ?? 'Consulta',
       current.idGrupoEstado,
       operator,
-      `Caso reasignado de ${prevName} a ${assignee.name}`
+      nota
+    )
+  );
+
+  let idCasoEstado = current.idCasoEstado;
+  let estadoDescripcion = current.estadoDescripcion ?? 'Consulta';
+  let idGrupoEstado = current.idGrupoEstado;
+
+  if (estados && current.idCasoEstado === RECLAMO_ESTADO_CONSULTA) {
+    const next = estados.find((item) => item.id === RECLAMO_ESTADO_CARTA_DOCUMENTO);
+    if (next) {
+      idCasoEstado = next.id;
+      estadoDescripcion = next.descripcion.trim();
+      idGrupoEstado = next.idGrupoEstado;
+      historial.push(
+        buildHistorialEntry(
+          idCasoEstado,
+          estadoDescripcion,
+          idGrupoEstado,
+          operator,
+          'Avance automático a Carta Documento'
+        )
+      );
+    }
+  }
+
+  const updated: Record<string, unknown> = {
+    responsable,
+    idCasoEstado,
+    estadoDescripcion,
+    idGrupoEstado,
+    historialEstados: historial,
+    asignacionPendiente: FieldValue.delete(),
+    updatedAt: new Date().toISOString(),
+  };
+  updated.adminBandeja = computeAdminBandeja({
+    idCasoEstado,
+    idGrupoEstado,
+    responsable,
+    asignacionPendiente: null,
+  });
+
+  await ref.set(updated, { merge: true });
+  const fresh = await ref.get();
+  return fresh.data() as StoredReclamoDocument;
+}
+
+/**
+ * Propone asignación a un delegado. Queda en bandeja `espera_aceptacion`
+ * hasta que acepte o rechace. Si el operador se asigna a sí mismo, es inmediato.
+ */
+export async function reasignarReclamo(
+  id: number,
+  assignee: { email: string; name: string },
+  operator: { email: string; name: string },
+  estados?: ReclamoEstado[]
+): Promise<StoredReclamoDocument> {
+  if (sameEmail(assignee.email, operator.email)) {
+    const prevName = (await getReclamoByIdFromFirestore(id))?.responsable?.name ?? 'sin asignar';
+    return applyResponsableInmediato(
+      id,
+      assignee,
+      operator,
+      `Caso tomado por ${assignee.name} (antes: ${prevName})`,
+      estados
+    );
+  }
+
+  const db = dbOrThrow();
+  const ref = db.collection('reclamos').doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Reclamo no encontrado');
+
+  const current = snap.data() as StoredReclamoDocument;
+  if (sameEmail(current.responsable?.email, assignee.email) && !current.asignacionPendiente) {
+    throw new Error('Ese delegado ya es responsable del caso');
+  }
+
+  const historial = current.historialEstados ?? [];
+  const prevName = current.responsable?.name ?? 'sin asignar';
+  const pendiente: ReclamoAsignacionPendiente = {
+    email: assignee.email.trim().toLowerCase(),
+    name: assignee.name,
+    proposedAt: new Date().toISOString(),
+    proposedByEmail: operator.email.trim().toLowerCase(),
+    proposedByName: operator.name,
+  };
+
+  historial.push(
+    buildHistorialEntry(
+      current.idCasoEstado,
+      current.estadoDescripcion ?? 'Consulta',
+      current.idGrupoEstado,
+      operator,
+      `Asignación propuesta a ${assignee.name} (antes: ${prevName}) — espera aceptación`
     )
   );
 
   const updated: Partial<StoredReclamoDocument> = {
-    responsable,
+    asignacionPendiente: pendiente,
     historialEstados: historial,
     updatedAt: new Date().toISOString(),
   };
   updated.adminBandeja = computeAdminBandeja({
     idCasoEstado: current.idCasoEstado,
     idGrupoEstado: current.idGrupoEstado,
-    responsable,
+    responsable: current.responsable,
+    asignacionPendiente: pendiente,
+  });
+
+  await ref.set(updated, { merge: true });
+  const fresh = await ref.get();
+  const reclamo = fresh.data() as StoredReclamoDocument;
+  notifyAsignacionPropuesta(reclamo, assignee, operator);
+  return reclamo;
+}
+
+async function assertPuedeDecidirAsignacion(
+  reclamo: StoredReclamoDocument,
+  operatorEmail: string
+): Promise<ReclamoAsignacionPendiente> {
+  const pendiente = reclamo.asignacionPendiente;
+  if (!pendiente?.email) throw new Error('No hay una asignación pendiente');
+
+  const { getAssigneeMatchEmails } = await import('@/lib/admin-assignee-identity');
+  const emails = await getAssigneeMatchEmails(operatorEmail);
+  if (!emails.includes(pendiente.email.trim().toLowerCase())) {
+    throw new Error('Solo el delegado propuesto puede decidir esta asignación');
+  }
+  return pendiente;
+}
+
+export async function aceptarAsignacionReclamo(
+  id: number,
+  operator: { email: string; name: string },
+  estados: ReclamoEstado[]
+): Promise<StoredReclamoDocument> {
+  const current = await getReclamoByIdFromFirestore(id);
+  if (!current) throw new Error('Reclamo no encontrado');
+  const pendiente = await assertPuedeDecidirAsignacion(current, operator.email);
+
+  const reclamo = await applyResponsableInmediato(
+    id,
+    { email: pendiente.email, name: pendiente.name },
+    operator,
+    `Asignación aceptada por ${pendiente.name}`,
+    estados
+  );
+
+  notifyAsignacionAceptada(
+    reclamo,
+    { email: pendiente.email, name: pendiente.name },
+    pendiente.proposedByEmail
+  );
+  return reclamo;
+}
+
+export async function rechazarAsignacionReclamo(
+  id: number,
+  operator: { email: string; name: string },
+  motivo?: string
+): Promise<StoredReclamoDocument> {
+  const db = dbOrThrow();
+  const ref = db.collection('reclamos').doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Reclamo no encontrado');
+
+  const current = snap.data() as StoredReclamoDocument;
+  const pendiente = await assertPuedeDecidirAsignacion(current, operator.email);
+
+  const historial = current.historialEstados ?? [];
+  const notaMotivo = motivo?.trim() ? ` — ${motivo.trim()}` : '';
+  historial.push(
+    buildHistorialEntry(
+      current.idCasoEstado,
+      current.estadoDescripcion ?? 'Consulta',
+      current.idGrupoEstado,
+      operator,
+      `Asignación rechazada por ${pendiente.name}${notaMotivo}`
+    )
+  );
+
+  const updated: Record<string, unknown> = {
+    asignacionPendiente: FieldValue.delete(),
+    historialEstados: historial,
+    updatedAt: new Date().toISOString(),
+  };
+  updated.adminBandeja = computeAdminBandeja({
+    idCasoEstado: current.idCasoEstado,
+    idGrupoEstado: current.idGrupoEstado,
+    responsable: current.responsable,
+    asignacionPendiente: null,
+  });
+
+  await ref.set(updated, { merge: true });
+  const fresh = await ref.get();
+  const reclamo = fresh.data() as StoredReclamoDocument;
+  notifyAsignacionRechazada(
+    reclamo,
+    { email: pendiente.email, name: pendiente.name },
+    pendiente.proposedByEmail,
+    motivo
+  );
+  return reclamo;
+}
+
+export async function cancelarAsignacionPendiente(
+  id: number,
+  operator: { email: string; name: string }
+): Promise<StoredReclamoDocument> {
+  const db = dbOrThrow();
+  const ref = db.collection('reclamos').doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Reclamo no encontrado');
+
+  const current = snap.data() as StoredReclamoDocument;
+  const pendiente = current.asignacionPendiente;
+  if (!pendiente?.email) throw new Error('No hay una asignación pendiente');
+
+  const historial = current.historialEstados ?? [];
+  historial.push(
+    buildHistorialEntry(
+      current.idCasoEstado,
+      current.estadoDescripcion ?? 'Consulta',
+      current.idGrupoEstado,
+      operator,
+      `Asignación pendiente a ${pendiente.name} cancelada`
+    )
+  );
+
+  const updated: Record<string, unknown> = {
+    asignacionPendiente: FieldValue.delete(),
+    historialEstados: historial,
+    updatedAt: new Date().toISOString(),
+  };
+  updated.adminBandeja = computeAdminBandeja({
+    idCasoEstado: current.idCasoEstado,
+    idGrupoEstado: current.idGrupoEstado,
+    responsable: current.responsable,
+    asignacionPendiente: null,
   });
 
   await ref.set(updated, { merge: true });
@@ -740,7 +1087,12 @@ export async function updateReclamoDatos(
 
   if (update.otrasEmpresas !== undefined) {
     const trimmed = (update.otrasEmpresas ?? '').trim();
-    patch.otrasEmpresas = trimmed || undefined;
+    if (trimmed) {
+      patch.otrasEmpresas = trimmed;
+    } else {
+      // Borrar el campo (merge:true no limpia con undefined).
+      (patch as Record<string, unknown>).otrasEmpresas = FieldValue.delete();
+    }
   }
 
   if (update.empresaIds !== undefined) {
