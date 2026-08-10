@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
     const email = decoded.email?.trim().toLowerCase();
 
     if (!email) {
-      return NextResponse.json({ error: 'La cuenta de Google no tiene email.' }, { status: 403 });
+      return NextResponse.json({ error: 'La cuenta de Firebase no tiene email.' }, { status: 403 });
     }
 
     const user = await resolveAdminSessionUser(email);
     if (!user) {
       return NextResponse.json(
-        { error: 'Esta cuenta de Google no tiene permiso para acceder al panel.' },
+        { error: 'Esta cuenta no tiene permiso para acceder al panel.' },
         { status: 403 }
       );
     }
@@ -59,6 +59,6 @@ export async function POST(request: NextRequest) {
     );
     return res;
   } catch {
-    return NextResponse.json({ error: 'No se pudo verificar la sesión de Google' }, { status: 401 });
+    return NextResponse.json({ error: 'No se pudo verificar la sesión' }, { status: 401 });
   }
 }

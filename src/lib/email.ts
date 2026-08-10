@@ -133,10 +133,11 @@ function renderEmailBody(text: string): string {
       if (!trimmed) return '<div style="height:12px;line-height:12px">&nbsp;</div>';
 
       const action = trimmed.match(
-        /^(Descargar PDF|Validar emisión):\s+(https?:\/\/\S+)$/i
+        /^(Descargar PDF|Validar emisión|Restablecer contraseña):\s+(https?:\/\/\S+)$/i
       );
       if (action) {
-        const isPrimary = action[1].toLocaleLowerCase('es-AR').startsWith('descargar');
+        const label = action[1].toLocaleLowerCase('es-AR');
+        const isPrimary = label.startsWith('descargar') || label.startsWith('restablecer');
         return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 10px">
           <tr>
             <td style="border-radius:6px;background:${isPrimary ? '#0066b3' : '#ffffff'};border:1px solid ${isPrimary ? '#0066b3' : '#b8c7d3'}">

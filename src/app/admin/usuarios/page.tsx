@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Pencil, Plus, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Check, Copy, KeyRound, Loader2, Pencil, Plus, Trash2, UserCheck, UserX, X } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
 import { RequirePermission } from '@/components/admin/AdminPermissionGuard';
 import {
@@ -36,6 +36,7 @@ const EMPTY_FORM: FormState = {
 
 export default function AdminUsuariosPage() {
   const currentUser = useAdminUser();
+  const canWriteUsers = currentUser.permissions.includes('users:write');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,14 @@ export default function AdminUsuariosPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [resettingEmail, setResettingEmail] = useState<string | null>(null);
+  const [resetLink, setResetLink] = useState<{
+    email: string;
+    link: string;
+    emailed: boolean;
+    warning?: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function loadUsers() {
     setLoading(true);
@@ -140,6 +149,45 @@ export default function AdminUsuariosPage() {
       await loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar');
+    }
+  }
+
+  async function handleResetPassword(email: string) {
+    setError(null);
+    setCopied(false);
+    setResettingEmail(email);
+    try {
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(email)}/reset-password`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (typeof data.link === 'string' && data.link) {
+        setResetLink({
+          email: typeof data.email === 'string' ? data.email : email,
+          link: data.link,
+          emailed: data.emailed === true,
+          warning: res.ok ? undefined : data.error || 'No se pudo enviar el mail',
+        });
+        if (!res.ok) return;
+      } else if (!res.ok) {
+        throw new Error(data.error || 'Error al generar el link');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al generar el link');
+    } finally {
+      setResettingEmail(null);
+    }
+  }
+
+  async function copyResetLink() {
+    if (!resetLink?.link) return;
+    try {
+      await navigator.clipboard.writeText(resetLink.link);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('No se pudo copiar el link. Seleccionalo manualmente.');
     }
   }
 
@@ -350,7 +398,22 @@ export default function AdminUsuariosPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {canWriteUsers ? (
+                        <button
+                          type="button"
+                          onClick={() => handleResetPassword(user.email)}
+                          disabled={resettingEmail === user.email}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+                        >
+                          {resettingEmail === user.email ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <KeyRound className="h-3.5 w-3.5" />
+                          )}
+                          Resetear
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => openEdit(user)}
@@ -390,6 +453,74 @@ export default function AdminUsuariosPage() {
         Los operadores con alcance &quot;Solo asignados&quot; ven todos los reclamos pero editan únicamente
         los que tienen asignados a su email.
       </p>
+
+      {resetLink ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Link de restablecimiento</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {resetLink.emailed ? (
+                    <>
+                      Se envió un mail a{' '}
+                      <span className="font-medium text-slate-700">{resetLink.email}</span> con el
+                      link de Firebase Authentication. También podés copiarlo acá.
+                    </>
+                  ) : (
+                    <>
+                      No se pudo enviar el mail a{' '}
+                      <span className="font-medium text-slate-700">{resetLink.email}</span>. Copiá
+                      el link y compartilo manualmente.
+                    </>
+                  )}
+                </p>
+                {resetLink.warning ? (
+                  <p className="mt-2 text-sm text-amber-700">{resetLink.warning}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setResetLink(null);
+                  setCopied(false);
+                }}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Cerrar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="break-all font-mono text-xs leading-relaxed text-slate-700">
+                {resetLink.link}
+              </p>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={copyResetLink}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#1a5fb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#134a8a]"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? 'Copiado' : 'Copiar link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setResetLink(null);
+                  setCopied(false);
+                }}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
     </RequirePermission>
   );

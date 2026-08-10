@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminPassword } from '@/lib/admin-password';
 import { getAdminSessionConfig, isAllowedAdminEmail, setAdminSessionCookie } from '@/lib/admin-session';
 import { getAdminUserAuthRecord, upgradeAdminPassword } from '@/lib/admin-users-store';
+import { verifyFirebaseEmailPassword } from '@/lib/firebase-password-auth';
 
 export async function POST(request: NextRequest) {
   const cfg = getAdminSessionConfig();
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   let valid = await verifyAdminPassword(password, user);
+  let usedFirebasePassword = false;
   const usedBootstrap =
     !valid &&
     Boolean(cfg.password) &&
@@ -46,10 +48,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (!valid) {
+    usedFirebasePassword = await verifyFirebaseEmailPassword(email, password);
+    valid = usedFirebasePassword;
+  }
+
+  if (!valid) {
     return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
   }
 
-  if (!user.passwordHash && user.legacyPasswordHash && !usedBootstrap) {
+  if (
+    (usedFirebasePassword || (!user.passwordHash && user.legacyPasswordHash && !usedBootstrap)) &&
+    !usedBootstrap
+  ) {
     await upgradeAdminPassword(email, password);
   }
 

@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Lock, Mail } from 'lucide-react';
-import { signInWithGoogleIdToken } from '@/lib/firebase-auth';
+import {
+  signInWithEmailPasswordIdToken,
+  signInWithGoogleIdToken,
+} from '@/lib/firebase-auth';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('abengolea1@gmail.com');
@@ -45,12 +48,40 @@ export default function AdminLoginPage() {
     }
   }
 
+  async function completeFirebaseSession(idToken: string): Promise<boolean> {
+    const res = await fetch('/api/admin/login/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ idToken }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(typeof data.error === 'string' ? data.error : 'No se pudo iniciar sesión');
+      return false;
+    }
+    return true;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
+      // 1) Contraseña definida vía Firebase reset / Auth
+      try {
+        const idToken = await signInWithEmailPasswordIdToken(email, password);
+        if (await completeFirebaseSession(idToken)) {
+          router.push('/admin');
+          return;
+        }
+        return;
+      } catch {
+        // Seguir con contraseña interna del panel
+      }
+
+      // 2) Contraseña guardada en admin_users (hash propio)
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
