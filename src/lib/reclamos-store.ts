@@ -252,6 +252,8 @@ export type ListAdminReclamosOptions = {
   unassignedOnly?: boolean;
   /** Búsqueda libre por nombre o email del responsable. */
   responsableQuery?: string;
+  provinciaId?: number;
+  ciudadId?: number;
 };
 
 async function countReclamosByQuery(
@@ -352,10 +354,16 @@ export async function listAdminReclamos(
     assigneeName,
     unassignedOnly = false,
     responsableQuery,
+    provinciaId,
+    ciudadId,
   } = options;
   const responsableQ = responsableQuery?.trim() ?? '';
+  const locationFilter = Boolean(provinciaId) || Boolean(ciudadId);
   const identityFilter =
-    Boolean(assignedToEmails?.length) || unassignedOnly || Boolean(responsableQ);
+    Boolean(assignedToEmails?.length) ||
+    unassignedOnly ||
+    Boolean(responsableQ) ||
+    locationFilter;
   const fetchLimit = identityFilter
     ? Math.max(limit, 5000)
     : bandeja === 'todos'
@@ -390,6 +398,13 @@ export async function listAdminReclamos(
 
   if (responsableQ) {
     items = items.filter((item) => matchesResponsableQuery(item, responsableQ));
+  }
+
+  if (provinciaId) {
+    items = items.filter((item) => item.denunciante?.provinciaId === provinciaId);
+  }
+  if (ciudadId) {
+    items = items.filter((item) => item.denunciante?.ciudadId === ciudadId);
   }
 
   items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

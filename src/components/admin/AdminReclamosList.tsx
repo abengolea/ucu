@@ -4,11 +4,20 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Archive, Loader2 } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
-import type { ReclamoAdminBandeja, ReclamoResponsable } from '@/types/reclamos';
+import type {
+  ReclamoAdminBandeja,
+  ReclamoCiudad,
+  ReclamoProvincia,
+  ReclamoResponsable,
+} from '@/types/reclamos';
 
 export type AdminReclamoListItem = {
   id: number;
   nombre: string;
+  provinciaId?: number | null;
+  ciudadId?: number | null;
+  ciudadNombre?: string | null;
+  provinciaNombre?: string | null;
   resumen: string;
   hecho?: string;
   estadoDescripcion?: string;
@@ -18,6 +27,13 @@ export type AdminReclamoListItem = {
   createdAt: string;
   empresas: { id: number; nombre: string; cuit?: string | null }[];
 };
+
+function formatLocalidad(reclamo: AdminReclamoListItem): string {
+  const ciudad = reclamo.ciudadNombre?.trim();
+  const provincia = reclamo.provinciaNombre?.trim();
+  if (ciudad && provincia) return `${ciudad}, ${provincia}`;
+  return ciudad || provincia || '—';
+}
 
 type BandejaCounts = Record<ReclamoAdminBandeja, number>;
 
@@ -58,6 +74,10 @@ export function AdminReclamosList({
   );
   const [responsableInput, setResponsableInput] = useState('');
   const [responsableQuery, setResponsableQuery] = useState('');
+  const [provinciaId, setProvinciaId] = useState('');
+  const [ciudadId, setCiudadId] = useState('');
+  const [provincias, setProvincias] = useState<ReclamoProvincia[]>([]);
+  const [ciudades, setCiudades] = useState<ReclamoCiudad[]>([]);
   const [reclamos, setReclamos] = useState<AdminReclamoListItem[]>([]);
   const [counts, setCounts] = useState<BandejaCounts>({ recibidos: 0, gestion: 0, archivados: 0 });
   const [assignedCount, setAssignedCount] = useState(0);
@@ -67,8 +87,9 @@ export function AdminReclamosList({
   const [archivingId, setArchivingId] = useState<number | null>(null);
 
   const filterByResponsable = mode === 'all' && Boolean(responsableQuery);
+  const filterByLocation = Boolean(provinciaId) || Boolean(ciudadId);
   const apiBandeja: ReclamoAdminBandeja | 'todos' =
-    mode === 'assigned' || filterByResponsable ? 'todos' : bandeja;
+    mode === 'assigned' || filterByResponsable || filterByLocation ? 'todos' : bandeja;
 
   useEffect(() => {
     if (mode !== 'all') return;
@@ -84,6 +105,32 @@ export function AdminReclamosList({
       setBandeja('todos');
     }
   }, [responsableQuery, bandeja]);
+
+  useEffect(() => {
+    if (filterByLocation && bandeja === 'recibidos') {
+      setBandeja('todos');
+    }
+  }, [filterByLocation, bandeja]);
+
+  useEffect(() => {
+    fetch('/api/reclamos/catalogos/provincias')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ReclamoProvincia[]) => setProvincias(Array.isArray(data) ? data : []))
+      .catch(() => setProvincias([]));
+  }, []);
+
+  useEffect(() => {
+    if (!provinciaId) {
+      setCiudades([]);
+      setCiudadId('');
+      return;
+    }
+    setCiudadId('');
+    fetch(`/api/reclamos/catalogos/ciudades?idProvincia=${encodeURIComponent(provinciaId)}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ReclamoCiudad[]) => setCiudades(Array.isArray(data) ? data : []))
+      .catch(() => setCiudades([]));
+  }, [provinciaId]);
 
   function canArchiveReclamo(reclamo: AdminReclamoListItem): boolean {
     if (!canWriteReclamos || reclamo.adminBandeja === 'archivados') return false;
@@ -130,6 +177,8 @@ export function AdminReclamosList({
       } else if (responsableQuery) {
         params.set('responsable', responsableQuery);
       }
+      if (provinciaId) params.set('provinciaId', provinciaId);
+      if (ciudadId) params.set('ciudadId', ciudadId);
 
       const res = await fetch(`/api/admin/reclamos?${params.toString()}`, { credentials: 'include' });
       const data = await res.json();
@@ -143,31 +192,33 @@ export function AdminReclamosList({
     } finally {
       setLoading(false);
     }
-  }, [mode, apiBandeja, responsableQuery]);
+  }, [mode, apiBandeja, responsableQuery, provinciaId, ciudadId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const clientBandejaSource = mode === 'assigned' || filterByResponsable ? reclamos : [];
+  const clientBandejaSource =
+    mode === 'assigned' || filterByResponsable || filterByLocation ? reclamos : [];
   const bandejaCounts =
-    mode === 'assigned' || filterByResponsable
+    mode === 'assigned' || filterByResponsable || filterByLocation
       ? {
           recibidos: clientBandejaSource.filter((item) => item.adminBandeja === 'recibidos').length,
           gestion: clientBandejaSource.filter((item) => item.adminBandeja === 'gestion').length,
-          archivados: clientBandejaSource.filter((item) => item.adminBandeja === 'archivados').length,
+          archivados: clientBandejaSource.filter((item) => item.adminBandeja === 'archivados')
+            .length,
         }
       : counts;
 
   const visibleReclamos =
-    (mode === 'assigned' || filterByResponsable) && bandeja !== 'todos'
+    (mode === 'assigned' || filterByResponsable || filterByLocation) && bandeja !== 'todos'
       ? reclamos.filter((item) => item.adminBandeja === bandeja)
       : reclamos;
 
   const filtered = visibleReclamos.filter((item) => {
     const empresas = item.empresas.map((e) => e.nombre).join(' ');
     const haystack =
-      `${item.id} ${item.nombre} ${item.resumen} ${item.hecho ?? ''} ${item.estadoDescripcion ?? ''} ${empresas} ${item.responsable?.name ?? ''}`.toLowerCase();
+      `${item.id} ${item.nombre} ${formatLocalidad(item)} ${item.resumen} ${item.hecho ?? ''} ${item.estadoDescripcion ?? ''} ${empresas} ${item.responsable?.name ?? ''}`.toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
 
@@ -232,6 +283,37 @@ export function AdminReclamosList({
           placeholder="Buscar por número, nombre, empresa o resumen…"
           className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
         />
+        <label className="flex w-full max-w-[200px] flex-col gap-1 text-sm text-slate-600">
+          <span className="font-semibold text-slate-700">Provincia</span>
+          <select
+            value={provinciaId}
+            onChange={(e) => setProvinciaId(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+          >
+            <option value="">Todas</option>
+            {provincias.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex w-full max-w-[200px] flex-col gap-1 text-sm text-slate-600">
+          <span className="font-semibold text-slate-700">Ciudad</span>
+          <select
+            value={ciudadId}
+            onChange={(e) => setCiudadId(e.target.value)}
+            disabled={!provinciaId}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4] disabled:bg-slate-50"
+          >
+            <option value="">{provinciaId ? 'Todas' : 'Elegí provincia…'}</option>
+            {ciudades.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
         {mode === 'all' ? (
           <label className="flex w-full max-w-xs flex-col gap-1 text-sm text-slate-600">
             <span className="font-semibold text-slate-700">Responsable</span>
@@ -242,6 +324,18 @@ export function AdminReclamosList({
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
             />
           </label>
+        ) : null}
+        {filterByLocation ? (
+          <button
+            type="button"
+            onClick={() => {
+              setProvinciaId('');
+              setCiudadId('');
+            }}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Limpiar ubicación
+          </button>
         ) : null}
       </div>
 
@@ -265,6 +359,7 @@ export function AdminReclamosList({
           <table className="w-full table-fixed text-left text-sm">
             <colgroup>
               <col className="w-[72px]" />
+              <col className="w-[150px]" />
               <col className="w-[160px]" />
               <col className="w-[120px]" />
               <col />
@@ -277,6 +372,7 @@ export function AdminReclamosList({
               <tr>
                 <th className="px-4 py-3 font-semibold">Nº</th>
                 <th className="px-4 py-3 font-semibold">Denunciante</th>
+                <th className="px-4 py-3 font-semibold">Localidad</th>
                 <th className="px-4 py-3 font-semibold">Empresa</th>
                 <th className="px-4 py-3 font-semibold">Hechos</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
@@ -292,6 +388,9 @@ export function AdminReclamosList({
                 <tr key={reclamo.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80">
                   <td className="px-4 py-3 align-top font-medium text-slate-900">{reclamo.id}</td>
                   <td className="px-4 py-3 align-top text-slate-700">{reclamo.nombre}</td>
+                  <td className="px-4 py-3 align-top text-slate-600">
+                    <span className="whitespace-normal break-words">{formatLocalidad(reclamo)}</span>
+                  </td>
                   <td className="truncate px-4 py-3 align-top text-slate-600" title={reclamo.empresas[0]?.nombre}>
                     {reclamo.empresas[0]?.nombre ?? '—'}
                   </td>
