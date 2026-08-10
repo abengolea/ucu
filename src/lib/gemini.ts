@@ -110,16 +110,19 @@ export async function extractFalloResumenFromPdf(
   }
 ): Promise<FalloResumenExtraction> {
   const system = `Sos redactor del Observatorio de Fallos de UCU (defensa del consumidor, Argentina).
-Tu ÚNICA tarea: redactar el resumen de lo que RESOLVIÓ el tribunal en el PDF.
+Tu ÚNICA tarea: redactar un resumen denso del MEOLO del caso (no un comentario largo ni un catálogo de montos).
 
-PASO 1: Localizá la dispositiva — secciones RESUELVE, FALLO, DISPONE, Por ello, VISTOS y CONSIDERANDO (solo la parte que lleva a la decisión).
-PASO 2: Redactá el resumen SOLO a partir de esa resolución.
+PASO 1: Identificá hechos, defensa de la demandada y resolución (RESUELVE / FALLO / DISPONE / Por ello / Considerandos que sustentan la decisión).
+PASO 2: Redactá un párrafo continuo (sin títulos ni viñetas) que cubra, en este orden:
+1) De qué va el caso: hecho generador y conflicto del consumidor (qué pasó).
+2) Defensa de la contraria: los argumentos centrales que esgrimió la demandada (fuerza mayor, cláusula penal, falta de prueba, legitimación, etc.).
+3) Qué dijo el tribunal: qué resolvió y el fundamento sustantivo clave (doctrina útil: por qué acogió o rechazó cada punto).
 
 El resumen DEBE:
-- Decir QUÉ decidió el juez (hizo lugar, rechazó, ordenó cobertura, condenó, declaró, etc.)
-- Incluir el fundamento sustantivo en una frase (derecho a la salud, Ley 24.240, cláusula abusiva, etc.)
-- Máximo 400 caracteres
-- Empezar con la decisión, NO con el nombre del juzgado ni del actor
+- Ir al meollo: priorizá hechos relevantes, defensa y ratio decidendi sobre el resultado numérico (los montos ya se cargan en otros campos).
+- Máximo 1000 caracteres; usá el espacio para sustancia, no para relleno.
+- Empezar por el conflicto o la decisión de fondo, NO por el nombre del juzgado ni del actor.
+- Mencionar doctrina explotable cuando figure (cláusula abusiva, renuncia anticipada, insuficiencia de fuerza mayor genérica, daño punitivo por menosprecio, etc.).
 
 PROHIBIDO en el resumen (nunca uses estas ideas):
 - "tuvo por presentada", "inició la acción", "imprimió trámite", "trámite sumarísimo"
@@ -127,6 +130,7 @@ PROHIBIDO en el resumen (nunca uses estas ideas):
 - "pase a despacho", "para resolver la medida cautelar solicitada" (si eso es TODO lo que hay)
 - narrar pasos de apertura del expediente sin decisión de fondo
 - abrir con "El Juzgado Federal de..."
+- ensayar comentarios de opinión ("el caso es interesante", "a mi criterio", "particularmente aprovechable")
 
 Si el documento SOLO contiene órdenes de trámite y NO hay resolución sobre el fondo ni sobre cautelar:
 - hayResolucionSustantiva: false
@@ -134,10 +138,10 @@ Si el documento SOLO contiene órdenes de trámite y NO hay resolución sobre el
 
 Si SÍ hay resolución (incluso cautelar):
 - hayResolucionSustantiva: true
-- resumen: la decisión concreta + fundamento
+- resumen: hechos + defensa + decisión/fundamento
 
-Ejemplo MALO: "El Juzgado Federal de Rosario 2 tuvo por presentada a la actora, inició el amparo contra OSDE y ordenó correr traslado por cinco días."
-Ejemplo BUENO: "Se ordenó a OSDE cubrir el medicamento al 100% en forma cautelar, por verosimilitud del derecho a la salud ante el rechazo de cobertura."
+Ejemplo MALO: "Se declaró parcialmente procedente el recurso. Se condenó a pagar el 9,73% del valor del automotor. Se desestimó el daño moral y se confirmó el daño punitivo."
+Ejemplo BUENO: "Consumidora adjudicataria de plan de ahorro recibió el auto fuera del plazo contractual tras firmar un anexo que eximía a la administradora por demoras de importación. La demandada alegó fuerza mayor por restricciones estatales, limitó la reparación a la cláusula penal e impugnó daño moral y punitivo. El tribunal rechazó la fuerza mayor genérica por falta de nexo causal concreto, desestimó el daño moral por falta de prueba, y confirmó el daño punitivo: conocer el riesgo, no informarlo y procurar una renuncia anticipada revela menosprecio grave a los derechos del consumidor."
 Ejemplo si solo hay trámite: "Sin resolución sustantiva: el tribunal ordenó traslado a la demandada y reservó la cautelar para despacho."
 
 Respondé SOLO JSON válido.`;
@@ -150,13 +154,13 @@ Respondé SOLO JSON válido.`;
     .filter(Boolean)
     .join('\n');
 
-  const userPrompt = `Leé el PDF y redactá el resumen según la dispositiva del fallo.
+  const userPrompt = `Leé el PDF y redactá el resumen del meollo (hechos, defensa de la contraria, decisión y fundamento).
 ${contextLines ? `\nContexto (no repetir como apertura del resumen):\n${contextLines}\n` : ''}
 JSON:
 {
   "dispositiva": "texto breve de lo resuelto o null si no hay",
   "hayResolucionSustantiva": true,
-  "resumen": "máx. 400 caracteres"
+  "resumen": "máx. 1000 caracteres"
 }`;
 
   const raw = await callGeminiParts(
@@ -202,14 +206,15 @@ Reglas:
   * Si están en dólares → "USD".
   * Hoy es frecuente que el daño punitivo se fije en canastas básicas: priorizá CBA cuando el texto lo diga, aunque también mencione un equivalente en pesos.
 - rubros, causas, etiquetas y tipoJuicio: usá nombres del catálogo provisto cuando correspondan; si no hay match claro, proponé el más cercano o dejá vacío.
-- resumen: OBLIGATORIO. Máximo 400 caracteres. Es el campo más importante.
-  * DEBE describir QUÉ RESOLVIÓ el tribunal (dispositiva: hizo lugar, rechazó, ordenó, condenó, declaró, etc.) y POR QUÉ (fundamentos jurídicos sustantivos en una frase: ley aplicada, derecho invocado, razón de la decisión).
+- resumen: OBLIGATORIO. Máximo 1000 caracteres. Es el campo más importante (borrador; se refina en paso aparte).
+  * DEBE ir al meollo: (1) de qué va el caso / hechos centrales, (2) defensa principal de la contraria, (3) qué resolvió el tribunal y el fundamento sustantivo clave.
+  * Priorizá doctrina útil sobre el listado de montos o el trámite procesal.
   * PROHIBIDO narrar el trámite procesal: no menciones "se inició la acción", "aceptó la presentación", "ordenó tramitar", "dispuso traslado", "corrió vista", "se reservó para más adelante", tipo de juicio como hecho principal, ni nombres de juzgado/actor como apertura.
-  * Buscá primero el bloque RESUELVE / FALLO / DISPONE / Por ello / Considerando del documento y resumí ESO.
-  * Si solo hay medida cautelar o resolución interlocutoria, resumí esa resolución concreta y su fundamento, no el escrito de inicio.
+  * Buscá hechos, contestación/recurso de la demandada y el bloque RESUELVE / FALLO / DISPONE / Por ello / Considerando.
+  * Si solo hay medida cautelar o resolución interlocutoria, resumí el conflicto, la oposición si figura, esa resolución y su fundamento.
   * Si el documento no contiene resolución sustantiva aún, indicá en pendienteManual "resumen: sin dispositiva en el PDF" y redactá lo más cercano a una resolución que figure.
-  * Ejemplo MALO: "Se inició amparo contra OSDE, el juzgado aceptó la demanda y ordenó traslado por 5 días."
-  * Ejemplo BUENO: "Se ordenó a OSDE cubrir el medicamento al 100% en forma cautelar, por verosimilitud del derecho a la salud ante el rechazo de cobertura del tratamiento prescrito."
+  * Ejemplo MALO: "Se declaró parcialmente procedente el recurso y se confirmó el daño punitivo."
+  * Ejemplo BUENO: "Demora en entrega de vehículo bajo plan de ahorro tras anexo que eximía a la administradora. La demandada invocó fuerza mayor por importaciones y negó daño moral/punitivo. El tribunal rechazó la fuerza mayor genérica y confirmó punitivo por renuncia anticipada abusiva."
 - provincia / jurisdicción:
   * Si el tribunal es Juzgado Federal, Cámara Federal, Tribunal Federal o similar → provincia del catálogo: "Justicia Federal" (NO uses la provincia geográfica como Santa Fe o Buenos Aires).
   * Si es Justicia Nacional o Juzgado Nacional → provincia del catálogo: "Justicia Nacional".
@@ -250,7 +255,7 @@ Forma JSON:
   "divisaCodigo": "CBA si canastas básicas; ARS si pesos; SMV si salarios mínimos; USD si dólares; o null",
   "dispositiva": "texto breve de la resolución/dispositiva o null",
   "hayResolucionSustantiva": true,
-  "resumen": "borrador breve; será refinado en paso aparte",
+  "resumen": "borrador del meollo; será refinado en paso aparte",
   "pendienteManual": ["campo X: motivo"]
 }`;
 
@@ -550,3 +555,4 @@ Generá la síntesis para el informe pago.`;
   if (!sintesis) throw new Error('Gemini no devolvió síntesis');
   return { sintesis, temas };
 }
+

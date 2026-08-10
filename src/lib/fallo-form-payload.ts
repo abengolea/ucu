@@ -46,6 +46,9 @@ export function validateFalloFormPayload(payload: FalloFormPayload): string | nu
   if (!payload.resumen.trim()) {
     return 'El resumen es obligatorio';
   }
+  if (payload.resumen.trim().length > 1000) {
+    return 'El resumen no puede superar 1000 caracteres';
+  }
   if (payload.firmActor) {
     if (!payload.actorEmpresaIds.length) {
       return 'Seleccioná al menos una empresa como actor';

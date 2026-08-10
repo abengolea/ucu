@@ -22,7 +22,7 @@ import type { ProvinciaOption } from '@/types/observatorio';
 
 export type { FalloAiExtractedForm, FalloAiExtractResult };
 
-const RESUMEN_MAX = 400;
+const RESUMEN_MAX = 1000;
 
 const PROCEDURAL_RESUMEN_PATTERNS = [
   /se inici[oó]/i,
@@ -402,7 +402,7 @@ export async function extractFalloFormFromPdf(pdfBuffer: Buffer): Promise<FalloA
     );
   } else if (resumenSoundsProcedural(resumen)) {
     warnings.push(
-      'El resumen parece describir trámite procesal; revisalo para destacar qué resolvió el tribunal y sus fundamentos'
+      'El resumen parece describir trámite procesal; revisalo para destacar hechos, defensa de la contraria y qué resolvió el tribunal'
     );
   }
 

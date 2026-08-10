@@ -807,12 +807,12 @@ export function FalloEditor({
             {!isPublic ? (
               <span
                 className={
-                  form.resumen.length > 400
+                  form.resumen.length > 1000
                     ? 'font-semibold text-red-600'
                     : 'text-slate-500'
                 }
               >
-                {form.resumen.length}/400
+                {form.resumen.length}/1000
               </span>
             ) : null}
           </span>
@@ -822,12 +822,12 @@ export function FalloEditor({
             rows={8}
             className={inputClass}
             required
-            maxLength={isPublic ? undefined : 500}
+            maxLength={isPublic ? undefined : 1000}
           />
           {!isPublic ? (
             <p className="mt-1 text-xs text-slate-500">
-              Debe sintetizar la resolución y sus fundamentos (qué decidió el juez y por qué), no el
-              trámite procesal. Máximo 400 caracteres.
+              Ir al meollo: de qué va el caso, qué alegó la defensa de la contraria y qué resolvió el
+              tribunal (con el fundamento clave). No el trámite procesal. Máximo 1000 caracteres.
             </p>
           ) : null}
         </label>
