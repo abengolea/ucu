@@ -11,7 +11,12 @@ import {
   getRubrosFromFirestore,
   getTiposJuicioFromFirestore,
 } from '@/lib/observatorio-store';
-import { extractFalloFromPdf, extractFalloResumenFromPdf, type FalloAiRawExtraction } from '@/lib/gemini';
+import {
+  extractFalloFromPdf,
+  extractFalloResumenFromPdf,
+  withGeminiFallbackTracking,
+  type FalloAiRawExtraction,
+} from '@/lib/gemini';
 import {
   DIVISA_CANASTA_CODIGO,
   DIVISA_PESOS_CODIGO,
@@ -238,37 +243,48 @@ export async function extractFalloFormFromPdf(pdfBuffer: Buffer): Promise<FalloA
   ]);
 
   const pdfBase64 = pdfBuffer.toString('base64');
-  const raw = await extractFalloFromPdf(pdfBase64, {
-    rubros: rubros.map((r) => r.rubro),
-    tiposJuicio: tiposJuicio.map((t) => t.nombre),
-    reclamos: reclamos.map((r) => r.description),
-    etiquetas: etiquetas.map((e) => e.description),
-    provincias: provincias.map((p) => p.nombre),
-    divisas: divisas.map((d) => `${d.nombre} (${d.codigo})`),
-  });
-
-  const demandadoLabel =
-    raw.demandado ??
-    raw.demandadoEmpresas?.[0] ??
-    raw.actorEmpresas?.[0] ??
-    null;
-
-  let resumenExtraction = await extractFalloResumenFromPdf(pdfBase64, {
-    actor: raw.actor,
-    demandado: demandadoLabel,
-    juzgado: raw.juzgado,
-  });
-
-  let resumen = trimResumen(resumenExtraction.resumen);
-
-  if (needsResumenRetry(resumen, resumenExtraction.hayResolucionSustantiva)) {
-    resumenExtraction = await extractFalloResumenFromPdf(pdfBase64, {
-      actor: raw.actor,
-      demandado: demandadoLabel,
-      juzgado: raw.juzgado,
+  const {
+    value: extracted,
+    usedLiteFallback,
+    liteModel,
+  } = await withGeminiFallbackTracking(async () => {
+    const extracted = await extractFalloFromPdf(pdfBase64, {
+      rubros: rubros.map((r) => r.rubro),
+      tiposJuicio: tiposJuicio.map((t) => t.nombre),
+      reclamos: reclamos.map((r) => r.description),
+      etiquetas: etiquetas.map((e) => e.description),
+      provincias: provincias.map((p) => p.nombre),
+      divisas: divisas.map((d) => `${d.nombre} (${d.codigo})`),
     });
-    resumen = trimResumen(resumenExtraction.resumen);
-  }
+
+    const demandadoLabel =
+      extracted.demandado ??
+      extracted.demandadoEmpresas?.[0] ??
+      extracted.actorEmpresas?.[0] ??
+      null;
+
+    let nextResumen = await extractFalloResumenFromPdf(pdfBase64, {
+      actor: extracted.actor,
+      demandado: demandadoLabel,
+      juzgado: extracted.juzgado,
+    });
+
+    let resumenText = trimResumen(nextResumen.resumen);
+
+    if (needsResumenRetry(resumenText, nextResumen.hayResolucionSustantiva)) {
+      nextResumen = await extractFalloResumenFromPdf(pdfBase64, {
+        actor: extracted.actor,
+        demandado: demandadoLabel,
+        juzgado: extracted.juzgado,
+      });
+      resumenText = trimResumen(nextResumen.resumen);
+    }
+
+    return { raw: extracted, resumenExtraction: nextResumen, resumen: resumenText };
+  });
+
+  const { raw, resumenExtraction } = extracted;
+  let { resumen } = extracted;
 
   if (
     !resumen &&
@@ -393,6 +409,12 @@ export async function extractFalloFormFromPdf(pdfBuffer: Buffer): Promise<FalloA
 
   const firmActor = Boolean(raw.firmActor);
   const personDemandado = Boolean(raw.personDemandado);
+
+  if (usedLiteFallback) {
+    warnings.push(
+      `Gemini Flash estaba saturado; se usó ${liteModel}. Revisá bien el formulario: este modelo es más liviano.`
+    );
+  }
 
   if (!resumen) {
     warnings.push('No se pudo generar el resumen; redactalo manualmente');

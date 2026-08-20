@@ -1,13 +1,46 @@
 import 'server-only';
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_LITE_MODEL = 'gemini-2.5-flash-lite';
+
+type GeminiCallStore = { usedLiteFallback: boolean; liteModel: string };
+
+const geminiCallStore = new AsyncLocalStorage<GeminiCallStore>();
 
 export function getGeminiModel(): string {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 }
 
-function getGeminiApiUrl(): string {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${getGeminiModel()}:generateContent`;
+export function getGeminiLiteModel(): string {
+  return process.env.GEMINI_MODEL_LITE?.trim() || DEFAULT_GEMINI_LITE_MODEL;
+}
+
+export async function withGeminiFallbackTracking<T>(
+  fn: () => Promise<T>
+): Promise<{ value: T; usedLiteFallback: boolean; liteModel: string }> {
+  const store: GeminiCallStore = {
+    usedLiteFallback: false,
+    liteModel: getGeminiLiteModel(),
+  };
+  const value = await geminiCallStore.run(store, fn);
+  return { value, usedLiteFallback: store.usedLiteFallback, liteModel: store.liteModel };
+}
+
+function geminiGenerateUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
+
+function isGeminiCapacityError(status: number, message: string): boolean {
+  if (status === 429 || status === 503) return true;
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('high demand') ||
+    normalized.includes('overloaded') ||
+    normalized.includes('resource_exhausted') ||
+    normalized.includes('try again later')
+  );
 }
 
 export function getGeminiApiKey(): string | null {
@@ -26,12 +59,33 @@ type GeminiPart =
   | { text: string }
   | { inlineData: { mimeType: string; data: string } };
 
+type GeminiApiResponse = {
+  error?: { message?: string };
+  candidates?: { content?: { parts?: { text?: string }[] } }[];
+};
+
+async function postGemini(
+  model: string,
+  apiKey: string,
+  body: Record<string, unknown>
+): Promise<{ ok: boolean; status: number; data: GeminiApiResponse }> {
+  const response = await fetch(`${geminiGenerateUrl(model)}?key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json()) as GeminiApiResponse;
+  return { ok: response.ok, status: response.status, data };
+}
+
 async function callGeminiParts(
   systemInstruction: string,
   parts: GeminiPart[],
   options?: { json?: boolean; temperature?: number }
 ): Promise<string> {
   const apiKey = requireGeminiApiKey();
+  const primaryModel = getGeminiModel();
+  const liteModel = getGeminiLiteModel();
 
   const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: systemInstruction }] as GeminiPart[] },
@@ -42,22 +96,33 @@ async function callGeminiParts(
     },
   };
 
-  const response = await fetch(`${getGeminiApiUrl()}?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let result = await postGemini(primaryModel, apiKey, body);
 
-  const data = (await response.json()) as {
-    error?: { message?: string };
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  };
+  if (!result.ok) {
+    const message = result.data.error?.message || `Gemini respondió ${result.status}`;
+    const canFallback =
+      liteModel !== primaryModel && isGeminiCapacityError(result.status, message);
 
-  if (!response.ok) {
-    throw new Error(data.error?.message || `Gemini respondió ${response.status}`);
+    if (!canFallback) {
+      throw new Error(message);
+    }
+
+    console.warn(
+      `[gemini] ${primaryModel} saturado (${result.status}); reintento con ${liteModel}`
+    );
+    result = await postGemini(liteModel, apiKey, body);
+    if (!result.ok) {
+      throw new Error(result.data.error?.message || `Gemini respondió ${result.status}`);
+    }
+
+    const store = geminiCallStore.getStore();
+    if (store) {
+      store.usedLiteFallback = true;
+      store.liteModel = liteModel;
+    }
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const text = result.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
   if (!text) throw new Error('Gemini no devolvió texto');
   return text;
 }
@@ -555,4 +620,3 @@ Generá la síntesis para el informe pago.`;
   if (!sintesis) throw new Error('Gemini no devolvió síntesis');
   return { sintesis, temas };
 }
-
