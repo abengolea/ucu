@@ -113,8 +113,16 @@ export async function PATCH(
         );
       }
       const estados = await getReclamoEstadosFromFirestore();
-      const reclamo = await aceptarAsignacionReclamo(reclamoId, operator, estados);
-      return NextResponse.json({ ok: true, reclamo: withBandeja(reclamo) });
+      const { reclamo, emailError } = await aceptarAsignacionReclamo(
+        reclamoId,
+        operator,
+        estados
+      );
+      return NextResponse.json({
+        ok: true,
+        reclamo: withBandeja(reclamo),
+        emailError: emailError ?? null,
+      });
     }
 
     if (body?.rechazarAsignacion === true) {
@@ -128,8 +136,16 @@ export async function PATCH(
         typeof body?.motivo === 'string' && body.motivo.trim()
           ? body.motivo.trim()
           : undefined;
-      const reclamo = await rechazarAsignacionReclamo(reclamoId, operator, motivo);
-      return NextResponse.json({ ok: true, reclamo: withBandeja(reclamo) });
+      const { reclamo, emailError } = await rechazarAsignacionReclamo(
+        reclamoId,
+        operator,
+        motivo
+      );
+      return NextResponse.json({
+        ok: true,
+        reclamo: withBandeja(reclamo),
+        emailError: emailError ?? null,
+      });
     }
 
     if (body?.cancelarAsignacion === true) {
@@ -202,8 +218,17 @@ export async function PATCH(
       }
       const estados = await getReclamoEstadosFromFirestore();
       try {
-        const reclamo = await reasignarReclamo(reclamoId, assignee, operator, estados);
-        return NextResponse.json({ ok: true, reclamo: withBandeja(reclamo) });
+        const { reclamo, emailError } = await reasignarReclamo(
+          reclamoId,
+          assignee,
+          operator,
+          estados
+        );
+        return NextResponse.json({
+          ok: true,
+          reclamo: withBandeja(reclamo),
+          emailError: emailError ?? null,
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'No se pudo asignar';
         return NextResponse.json({ error: message }, { status: 400 });

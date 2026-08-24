@@ -159,13 +159,16 @@ export function ReclamoResponsableCard({
   canDecideAsignacion?: boolean;
 }) {
   const pendiente = reclamo.asignacionPendiente ?? null;
-  const [selectedEmail, setSelectedEmail] = useState(reclamo.responsable?.email ?? '');
+  const [selectedEmail, setSelectedEmail] = useState(
+    reclamo.asignacionPendiente?.email ?? reclamo.responsable?.email ?? ''
+  );
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const [rejectMotivo, setRejectMotivo] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const selectedDelegado = useMemo(
     () => delegados.find((d) => d.email === selectedEmail) ?? null,
@@ -181,7 +184,7 @@ export function ReclamoResponsableCard({
   }, [delegados, query]);
 
   useEffect(() => {
-    setSelectedEmail(reclamo.responsable?.email ?? '');
+    setSelectedEmail(pendiente?.email ?? reclamo.responsable?.email ?? '');
     setQuery('');
     setOpen(false);
   }, [reclamo.responsable?.email, pendiente?.email]);
@@ -196,6 +199,7 @@ export function ReclamoResponsableCard({
     if (!selectedEmail) return;
     setSaving(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/reclamos/${reclamoId}`, {
         method: 'PATCH',
@@ -206,6 +210,13 @@ export function ReclamoResponsableCard({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo reasignar');
       if (data.reclamo) onUpdated(data.reclamo);
+      if (typeof data.emailError === 'string' && data.emailError) {
+        setError(data.emailError);
+      } else if (data.reclamo?.asignacionPendiente?.email) {
+        setNotice(
+          `Se envió un mail a ${data.reclamo.asignacionPendiente.email} para que acepte el caso.`
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -216,6 +227,7 @@ export function ReclamoResponsableCard({
   async function patchAsignacion(body: Record<string, unknown>) {
     setDeciding(true);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/reclamos/${reclamoId}`, {
         method: 'PATCH',
@@ -226,6 +238,9 @@ export function ReclamoResponsableCard({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la asignación');
       if (data.reclamo) onUpdated(data.reclamo);
+      if (typeof data.emailError === 'string' && data.emailError) {
+        setError(data.emailError);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -234,9 +249,10 @@ export function ReclamoResponsableCard({
   }
 
   const pendingEmail = pendiente?.email ?? '';
+  const isResend = Boolean(pendiente && selectedEmail && selectedEmail === pendingEmail);
   const changed =
-    selectedEmail !== (reclamo.responsable?.email ?? '') &&
-    selectedEmail !== pendingEmail;
+    isResend ||
+    (selectedEmail !== (reclamo.responsable?.email ?? '') && selectedEmail !== pendingEmail);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -324,6 +340,7 @@ export function ReclamoResponsableCard({
       )}
 
       {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+      {notice ? <p className="mb-3 text-sm text-emerald-700">{notice}</p> : null}
 
       {canWrite && delegados.length > 0 ? (
         <div className="border-t border-slate-100 pt-4">
@@ -379,8 +396,9 @@ export function ReclamoResponsableCard({
             </p>
           ) : null}
           <p className="mt-2 text-xs text-slate-500">
-            El delegado deberá aceptar o rechazar. Mientras tanto el caso queda en &quot;Espera
-            aceptación&quot; y te avisamos por email cuando decida.
+            Al asignar se envía un mail al delegado para que acepte o rechace. Mientras tanto el
+            caso queda en &quot;Espera aceptación&quot; y también te avisamos por email cuando
+            decida.
           </p>
           <button
             type="button"
@@ -389,10 +407,14 @@ export function ReclamoResponsableCard({
             className="mt-3 w-full rounded-lg border border-[#1a5fb4] px-4 py-2 text-sm font-semibold text-[#1a5fb4] hover:bg-[#1a5fb4]/5 disabled:opacity-50"
           >
             {saving
-              ? 'Asignando…'
-              : pendiente || reclamo.responsable
-                ? 'Proponer reasignación'
-                : 'Asignar caso'}
+              ? isResend
+                ? 'Reenviando mail…'
+                : 'Asignando…'
+              : isResend
+                ? 'Reenviar mail al delegado'
+                : pendiente || reclamo.responsable
+                  ? 'Proponer reasignación'
+                  : 'Asignar caso'}
           </button>
         </div>
       ) : null}

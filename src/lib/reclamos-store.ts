@@ -34,6 +34,8 @@ import {
   notifyAsignacionAceptada,
   notifyAsignacionPropuesta,
   notifyAsignacionRechazada,
+  runAsignacionNotify,
+  type AsignacionNotifyResult,
 } from '@/lib/reclamos-asignacion-email';
 import { buildRegistrarSinGestionEmail } from '@/lib/reclamos-registrar-sin-gestion';
 import { sendEmail } from '@/lib/email';
@@ -785,16 +787,17 @@ export async function reasignarReclamo(
   assignee: { email: string; name: string },
   operator: { email: string; name: string },
   estados?: ReclamoEstado[]
-): Promise<StoredReclamoDocument> {
+): Promise<AsignacionNotifyResult> {
   if (sameEmail(assignee.email, operator.email)) {
     const prevName = (await getReclamoByIdFromFirestore(id))?.responsable?.name ?? 'sin asignar';
-    return applyResponsableInmediato(
+    const reclamo = await applyResponsableInmediato(
       id,
       assignee,
       operator,
       `Caso tomado por ${assignee.name} (antes: ${prevName})`,
       estados
     );
+    return { reclamo };
   }
 
   const db = dbOrThrow();
@@ -841,9 +844,10 @@ export async function reasignarReclamo(
 
   await ref.set(updated, { merge: true });
   const fresh = await ref.get();
-  const reclamo = fresh.data() as StoredReclamoDocument;
-  notifyAsignacionPropuesta(reclamo, assignee, operator);
-  return reclamo;
+  const reclamo = { ...(fresh.data() as StoredReclamoDocument), id };
+  return runAsignacionNotify(reclamo, 'propuesta', () =>
+    notifyAsignacionPropuesta(reclamo, assignee, operator)
+  );
 }
 
 async function assertPuedeDecidirAsignacion(
@@ -865,7 +869,7 @@ export async function aceptarAsignacionReclamo(
   id: number,
   operator: { email: string; name: string },
   estados: ReclamoEstado[]
-): Promise<StoredReclamoDocument> {
+): Promise<AsignacionNotifyResult> {
   const current = await getReclamoByIdFromFirestore(id);
   if (!current) throw new Error('Reclamo no encontrado');
   const pendiente = await assertPuedeDecidirAsignacion(current, operator.email);
@@ -878,19 +882,20 @@ export async function aceptarAsignacionReclamo(
     estados
   );
 
-  notifyAsignacionAceptada(
-    reclamo,
-    { email: pendiente.email, name: pendiente.name },
-    pendiente.proposedByEmail
+  return runAsignacionNotify({ ...reclamo, id }, 'aceptada', () =>
+    notifyAsignacionAceptada(
+      { ...reclamo, id },
+      { email: pendiente.email, name: pendiente.name },
+      pendiente.proposedByEmail
+    )
   );
-  return reclamo;
 }
 
 export async function rechazarAsignacionReclamo(
   id: number,
   operator: { email: string; name: string },
   motivo?: string
-): Promise<StoredReclamoDocument> {
+): Promise<AsignacionNotifyResult> {
   const db = dbOrThrow();
   const ref = db.collection('reclamos').doc(String(id));
   const snap = await ref.get();
@@ -925,14 +930,15 @@ export async function rechazarAsignacionReclamo(
 
   await ref.set(updated, { merge: true });
   const fresh = await ref.get();
-  const reclamo = fresh.data() as StoredReclamoDocument;
-  notifyAsignacionRechazada(
-    reclamo,
-    { email: pendiente.email, name: pendiente.name },
-    pendiente.proposedByEmail,
-    motivo
+  const reclamo = { ...(fresh.data() as StoredReclamoDocument), id };
+  return runAsignacionNotify(reclamo, 'rechazada', () =>
+    notifyAsignacionRechazada(
+      reclamo,
+      { email: pendiente.email, name: pendiente.name },
+      pendiente.proposedByEmail,
+      motivo
+    )
   );
-  return reclamo;
 }
 
 export async function cancelarAsignacionPendiente(
