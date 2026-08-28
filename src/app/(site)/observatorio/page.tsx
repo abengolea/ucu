@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { FalloList, ObservatorioHero } from '@/components/observatorio/FalloCard';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { SectionHeader } from '@/components/ui/PageHeader';
 import { getFallos } from '@/lib/observatorio';
-import { buildPageMetadata } from '@/lib/seo';
+import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,21 @@ export default async function ObservatorioPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 lg:px-6">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            title: 'Observatorio de fallos de consumo',
+            description:
+              'Base de antecedentes jurisprudenciales en defensa del consumidor: buscá y consultá fallos compilados por Usuarios y Consumidores Unidos.',
+            path: '/observatorio',
+            type: 'CollectionPage',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Observatorio', path: '/observatorio' },
+          ]),
+        ]}
+      />
       <ObservatorioHero />
 
       <section className="mt-14">

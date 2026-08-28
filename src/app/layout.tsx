@@ -47,6 +47,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
+    types: {
+      'application/rss+xml': '/feed.xml',
+    },
   },
   openGraph: {
     type: 'website',
@@ -82,6 +85,12 @@ export const metadata: Metadata = {
   icons: {
     icon: '/brand/favicon.png',
     apple: '/brand/favicon.png',
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
   },
   other: {
     'geo.region': 'AR',

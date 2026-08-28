@@ -13,8 +13,8 @@ import {
 import {
   breadcrumbJsonLd,
   buildPageMetadata,
+  legalDocumentJsonLd,
   truncateMeta,
-  webPageJsonLd,
 } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -88,10 +88,24 @@ export default async function FalloDetailPage({
     <main className="mx-auto max-w-4xl px-4 py-10">
       <JsonLd
         data={[
-          webPageJsonLd({
+          legalDocumentJsonLd({
             title: shareTitle,
             description: shareDescription,
             path: `/observatorio/fallo/${id}`,
+            datePublished: fallo.fecha || fallo.createdAt,
+            dateModified: fallo.updatedAt || fallo.createdAt,
+            court: fallo.juzgado?.nombre || undefined,
+            about: [
+              demandado !== 'Sin especificar' ? demandado : '',
+              ...fallo.rubro.map((item) => item.nombre),
+              ...fallo.causas.map((item) => item.nombre),
+            ].filter(Boolean),
+            keywords: [
+              'fallo consumidor',
+              'jurisprudencia',
+              ...fallo.rubro.map((item) => item.nombre),
+              ...fallo.etiquetas.map((item) => item.nombre),
+            ],
           }),
           breadcrumbJsonLd([
             { name: 'Inicio', path: '/' },

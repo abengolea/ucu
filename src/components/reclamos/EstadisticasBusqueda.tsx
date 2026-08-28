@@ -1,43 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Loader2, Search, ShieldCheck } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type EmpresaHit = { id: number; nombre: string; cuit: string | null };
 
-type StatsResult = {
-  empresaId: number;
-  empresaNombre: string;
-  total: number;
-  rangoFechas: { desde: string | null; hasta: string | null };
-  mensaje: string;
-  informe: {
-    disponible: boolean;
-    precioCents: number;
-    precioLabel: string;
-    pagosConfigurados: boolean;
-    requiereMinimo: number;
-    incluye?: string;
-  };
-};
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return y && m && d ? `${d}/${m}/${y}` : iso;
-}
-
 export function EstadisticasBusqueda() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<EmpresaHit[]>([]);
   const [searching, setSearching] = useState(false);
-  const [loadingStats, setLoadingStats] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<StatsResult | null>(null);
-  const [email, setEmail] = useState('');
-  const [showCheckout, setShowCheckout] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -77,48 +52,6 @@ export function EstadisticasBusqueda() {
     };
   }, [query]);
 
-  async function selectEmpresa(empresa: EmpresaHit) {
-    setQuery(empresa.nombre);
-    setHits([]);
-    setLoadingStats(true);
-    setError(null);
-    setStats(null);
-    setShowCheckout(false);
-
-    try {
-      const res = await fetch(`/api/estadisticas/empresa/${empresa.id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las estadísticas');
-      setStats(data as StatsResult);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error inesperado');
-    } finally {
-      setLoadingStats(false);
-    }
-  }
-
-  async function startCheckout(event: React.FormEvent) {
-    event.preventDefault();
-    if (!stats) return;
-    setCheckoutLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/informes/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId: stats.empresaId, email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'No se pudo iniciar el pago');
-      if (!data.initPoint) throw new Error('Mercado Pago no devolvió URL de pago');
-      window.location.href = data.initPoint as string;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar el pago');
-      setCheckoutLoading(false);
-    }
-  }
-
   return (
     <div className="space-y-8">
       <div className="relative">
@@ -131,11 +64,7 @@ export function EstadisticasBusqueda() {
             <input
               className="field-input w-full pl-10"
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setStats(null);
-                setShowCheckout(false);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Ej. Telecom, Edenor, Banco…"
               autoComplete="off"
               spellCheck={false}
@@ -156,7 +85,7 @@ export function EstadisticasBusqueda() {
                 <button
                   type="button"
                   className="flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left transition hover:bg-[var(--surface-muted)]"
-                  onClick={() => selectEmpresa(hit)}
+                  onClick={() => router.push(`/empresas/${hit.id}`)}
                 >
                   <span className="font-display text-sm font-semibold text-[var(--ink)]">
                     {hit.nombre}
@@ -171,13 +100,6 @@ export function EstadisticasBusqueda() {
         ) : null}
       </div>
 
-      {loadingStats ? (
-        <div className="flex items-center justify-center gap-2 py-12 text-ucu-blue">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span className="font-display text-sm font-medium">Consultando reclamos…</span>
-        </div>
-      ) : null}
-
       {error ? (
         <div
           role="alert"
@@ -185,118 +107,6 @@ export function EstadisticasBusqueda() {
         >
           {error}
         </div>
-      ) : null}
-
-      {stats ? (
-        <section className="space-y-6 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-6 md:p-8">
-          <div>
-            <p className="ucu-eyebrow mb-2">Resultado</p>
-            <h2 className="font-display text-2xl font-bold tracking-tight text-[var(--ink)]">
-              {stats.mensaje}
-            </h2>
-            {stats.total > 0 ? (
-              <p className="mt-2 font-serif text-sm text-[var(--ink-muted)]">
-                Período observado: {formatDate(stats.rangoFechas.desde)} —{' '}
-                {formatDate(stats.rangoFechas.hasta)}
-              </p>
-            ) : null}
-          </div>
-
-          {stats.total > 0 ? (
-            <div className="rounded-lg bg-[var(--surface-muted)] px-5 py-4">
-              <p className="font-display text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--ink-faint)]">
-                Reclamos registrados
-              </p>
-              <p className="mt-1 font-display text-3xl font-bold text-[var(--ink)]">{stats.total}</p>
-              <p className="mt-2 font-serif text-sm text-[var(--ink-muted)]">
-                El informe pago incluye el desglose por causas tipificadas y una lectura
-                clara para el consumidor.
-              </p>
-            </div>
-          ) : null}
-
-          {stats.total > 0 ? (
-            <div className="border-t border-[var(--border)] pt-6">
-              {!showCheckout ? (
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex gap-3">
-                    <div className="mt-0.5 text-ucu-magenta">
-                      <FileText className="h-5 w-5" strokeWidth={1.75} />
-                    </div>
-                    <div>
-                      <p className="font-display text-sm font-bold text-[var(--ink)]">
-                        ¿Querés el informe oficial?
-                      </p>
-                      <p className="mt-1 max-w-md font-serif text-sm text-[var(--ink-muted)]">
-                        PDF con causas tipificadas, lectura para el consumidor y código
-                        verificable en ucu.org.ar
-                        {stats.informe.pagosConfigurados
-                          ? ` — ${stats.informe.precioLabel}`
-                          : ''}
-                        .
-                      </p>
-                    </div>
-                  </div>
-                  {stats.informe.disponible ? (
-                    <button
-                      type="button"
-                      className="ucu-btn-primary shrink-0"
-                      onClick={() => setShowCheckout(true)}
-                    >
-                      Emitir informe
-                    </button>
-                  ) : (
-                    <p className="font-serif text-sm text-[var(--ink-muted)]">
-                      {stats.informe.pagosConfigurados
-                        ? 'Informe no disponible para este resultado.'
-                        : 'Pagos en configuración. Pronto podrás emitir el informe online.'}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <form onSubmit={startCheckout} className="space-y-4">
-                  <p className="font-display text-sm font-bold text-[var(--ink)]">
-                    Te enviamos el PDF a tu email después del pago ({stats.informe.precioLabel})
-                  </p>
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-[var(--ink)]">Email</span>
-                    <input
-                      type="email"
-                      required
-                      className="field-input w-full max-w-md"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tu@email.com"
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="submit"
-                      disabled={checkoutLoading}
-                      className="ucu-btn-primary disabled:opacity-60"
-                    >
-                      {checkoutLoading ? 'Redirigiendo a Mercado Pago…' : 'Pagar con Mercado Pago'}
-                    </button>
-                    <button
-                      type="button"
-                      className="ucu-btn-ghost"
-                      onClick={() => setShowCheckout(false)}
-                      disabled={checkoutLoading}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          ) : null}
-
-          <p className="flex items-start gap-2 font-serif text-xs leading-relaxed text-[var(--ink-muted)]">
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ucu-green" />
-            Estadística de reclamos recibidos por UCU. No constituye sentencia ni determina
-            responsabilidad legal.
-          </p>
-        </section>
       ) : null}
 
       <p className="font-serif text-sm text-[var(--ink-muted)]">

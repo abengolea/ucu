@@ -86,5 +86,10 @@ export async function POST(request: NextRequest) {
   await db.collection('posts').doc(slug).set(post);
   await upsertTags(db, tags);
 
+  if (post.status === 'publish') {
+    const { notifyIndexNow } = await import('@/lib/indexnow');
+    notifyIndexNow([`/posts/${slug}`]);
+  }
+
   return NextResponse.json({ ok: true, slug, url: `/posts/${slug}` });
 }

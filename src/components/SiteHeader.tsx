@@ -127,6 +127,8 @@ export function SiteFooter() {
               { href: '/observatorio', label: 'Observatorio' },
               { href: '/categoria/alertas-de-fraude', label: 'Alertas de fraude' },
               { href: '/categoria/acciones-colectivas', label: 'Acciones colectivas' },
+              { href: '/educacion-financiera', label: 'Educación financiera' },
+              { href: '/feed.xml', label: 'RSS' },
             ].map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="transition hover:text-white">

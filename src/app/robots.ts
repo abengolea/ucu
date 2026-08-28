@@ -1,6 +1,20 @@
 import type { MetadataRoute } from 'next';
 import { getSiteUrl } from '@/lib/seo';
 
+const DISALLOW = ['/admin', '/admin/', '/api/', '/api'];
+
+function aiRule(userAgent: string): {
+  userAgent: string;
+  allow: string;
+  disallow: string[];
+} {
+  return {
+    userAgent,
+    allow: '/',
+    disallow: DISALLOW,
+  };
+}
+
 export default function robots(): MetadataRoute.Robots {
   const base = getSiteUrl();
 
@@ -9,44 +23,20 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
+        disallow: DISALLOW,
       },
-      // Permitir crawlers de IA para citación y descubrimiento
-      {
-        userAgent: 'GPTBot',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'ChatGPT-User',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'Google-Extended',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'ClaudeBot',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'Anthropic-AI',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'PerplexityBot',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
-      {
-        userAgent: 'Applebot-Extended',
-        allow: '/',
-        disallow: ['/admin', '/admin/', '/api/', '/api'],
-      },
+      // OpenAI: búsqueda/citas vs. entrenamiento
+      aiRule('OAI-SearchBot'),
+      aiRule('ChatGPT-User'),
+      aiRule('GPTBot'),
+      // Anthropic / Claude
+      aiRule('Claude-SearchBot'),
+      aiRule('Claude-User'),
+      aiRule('ClaudeBot'),
+      // Otros asistentes
+      aiRule('Google-Extended'),
+      aiRule('PerplexityBot'),
+      aiRule('Applebot-Extended'),
     ],
     sitemap: `${base}/sitemap.xml`,
     host: base,

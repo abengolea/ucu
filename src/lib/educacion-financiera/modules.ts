@@ -23,6 +23,7 @@ export type OfficialResource = {
 
 export type EducationModule = {
   id: number;
+  slug: string;
   title: string;
   subtitle: string;
   urgency: string;
@@ -49,6 +50,7 @@ export type EducationModule = {
 export const EDUCATION_MODULES: EducationModule[] = [
   {
     id: 1,
+    slug: 'presupuesto',
     icon: 'clipboard',
     title: 'Salud financiera y presupuesto',
     subtitle: 'Ordená el mes',
@@ -106,6 +108,7 @@ export const EDUCATION_MODULES: EducationModule[] = [
   },
   {
     id: 2,
+    slug: 'ahorro-y-metas',
     icon: 'piggy',
     title: 'Ahorro y metas',
     subtitle: 'Fondo y horizonte',
@@ -163,6 +166,7 @@ export const EDUCATION_MODULES: EducationModule[] = [
   },
   {
     id: 3,
+    slug: 'deuda-y-credito',
     icon: 'credit-card',
     title: 'Deuda, crédito e historial',
     subtitle: 'Pagar sin ahogarte',
@@ -218,12 +222,13 @@ export const EDUCATION_MODULES: EducationModule[] = [
       },
       cta: {
         label: 'Abrir calculadora de pago mínimo',
-        href: '#calculadoras-pago-minimo',
+        href: '/educacion-financiera?seccion=calculadoras',
       },
     },
   },
   {
     id: 4,
+    slug: 'cuentas-y-pagos',
     icon: 'wallet',
     title: 'Cuentas y medios de pago',
     subtitle: 'Elegir y operar seguro',
@@ -281,6 +286,7 @@ export const EDUCATION_MODULES: EducationModule[] = [
   },
   {
     id: 5,
+    slug: 'inversiones-basicas',
     icon: 'trending-up',
     title: 'Inversiones básicas',
     subtitle: 'Riesgo y protección',
@@ -338,6 +344,7 @@ export const EDUCATION_MODULES: EducationModule[] = [
   },
   {
     id: 6,
+    slug: 'impuestos-y-comprobantes',
     icon: 'receipt',
     title: 'Impuestos y comprobantes',
     subtitle: 'Leer el ticket',
@@ -395,6 +402,7 @@ export const EDUCATION_MODULES: EducationModule[] = [
   },
   {
     id: 7,
+    slug: 'como-se-calculan-los-intereses',
     icon: 'percent',
     title: 'Cómo se calculan los intereses',
     subtitle: 'TNA, TEA y CFT en criollo',
@@ -454,12 +462,13 @@ export const EDUCATION_MODULES: EducationModule[] = [
       },
       cta: {
         label: 'Probar calculadora de pago mínimo / intereses',
-        href: '#calculadoras-pago-minimo',
+        href: '/educacion-financiera?seccion=calculadoras',
       },
     },
   },
   {
     id: 8,
+    slug: 'salir-del-sobreendeudamiento',
     icon: 'alert',
     title: 'Salir del sobreendeudamiento',
     subtitle: 'Frenar la bola de nieve',
@@ -524,8 +533,16 @@ export const EDUCATION_MODULES: EducationModule[] = [
       },
       cta: {
         label: 'Ir a calculadoras (pago mínimo y ahorro)',
-        href: '#calculadoras-pago-minimo',
+        href: '/educacion-financiera?seccion=calculadoras',
       },
     },
   },
 ];
+
+export function getEducationModuleBySlug(slug: string): EducationModule | undefined {
+  return EDUCATION_MODULES.find((mod) => mod.slug === slug);
+}
+
+export function educationModulePath(mod: EducationModule): string {
+  return `/educacion-financiera/${mod.slug}`;
+}

@@ -1,32 +1,37 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowRight,
   Calculator,
   Check,
   ClipboardList,
   CreditCard,
-  ExternalLink,
   Percent,
   PiggyBank,
   Receipt,
+  ScanSearch,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { CoursePretest } from '@/components/educacion-financiera/CoursePretest';
 import { CourseTemplates } from '@/components/educacion-financiera/CourseTemplates';
 import { EducationCalculators } from '@/components/educacion-financiera/EducationCalculators';
+import { FinancialRadiography } from '@/components/educacion-financiera/FinancialRadiography';
 import {
   EDUCATION_MODULES,
-  type EducationModule,
+  educationModulePath,
 } from '@/lib/educacion-financiera/modules';
+import {
+  clearRadiography,
+  loadRadiography,
+  type RadiographyResult,
+} from '@/lib/educacion-financiera/radiografia';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'ucu-edu-financiera-v2-completed';
-const PRETEST_KEY = 'ucu-edu-financiera-v2-pretest-done';
+const RADIO_SKIP_KEY = 'ucu-edu-financiera-v2-radio-skip';
 
 const ICONS = {
   clipboard: ClipboardList,
@@ -38,6 +43,8 @@ const ICONS = {
   percent: Percent,
   alert: AlertTriangle,
 } as const;
+
+type AppSection = 'home' | 'curso' | 'calculadoras' | 'radiografia';
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
@@ -55,241 +62,19 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function QuizCard({
-  quiz,
-  onComplete,
+export function EducacionFinancieraApp({
+  initialSection = 'home',
 }: {
-  quiz: EducationModule['content']['quiz'];
-  onComplete: () => void;
+  initialSection?: AppSection;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const isCorrect = selected === quiz.correct;
-
-  return (
-    <div className="mt-8 rounded-xl border border-ucu-blue/20 bg-ucu-blue/[0.04] p-5 md:p-6">
-      <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-ucu-blue">
-        Pregunta
-      </p>
-      <p className="mt-2 font-serif text-base leading-relaxed text-[var(--ink)]">{quiz.question}</p>
-
-      <div className="mt-4 flex flex-col gap-2" role="radiogroup" aria-label="Opciones">
-        {quiz.options.map((opt, i) => {
-          let state: 'idle' | 'selected' | 'correct' | 'wrong' = 'idle';
-          if (submitted && i === quiz.correct) state = 'correct';
-          else if (submitted && i === selected && !isCorrect) state = 'wrong';
-          else if (!submitted && i === selected) state = 'selected';
-
-          return (
-            <button
-              key={opt}
-              type="button"
-              role="radio"
-              aria-checked={selected === i}
-              disabled={submitted}
-              onClick={() => setSelected(i)}
-              className={cn(
-                'rounded-lg border px-4 py-3 text-left font-serif text-sm leading-snug transition',
-                state === 'idle' &&
-                  'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/40',
-                state === 'selected' && 'border-ucu-blue bg-ucu-blue/10 text-[var(--ink)]',
-                state === 'correct' && 'border-[#5a9a1f] bg-ucu-green/15 text-[#3d6e12]',
-                state === 'wrong' && 'border-ucu-magenta/50 bg-ucu-magenta/10 text-[#9a0054]',
-                submitted && 'cursor-default',
-              )}
-            >
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-
-      {!submitted ? (
-        <button
-          type="button"
-          disabled={selected === null}
-          onClick={() => {
-            if (selected === null) return;
-            setSubmitted(true);
-            if (selected === quiz.correct) onComplete();
-          }}
-          className="ucu-btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Verificar
-        </button>
-      ) : (
-        <div
-          className={cn(
-            'mt-4 rounded-lg border px-4 py-3 font-serif text-sm leading-relaxed',
-            isCorrect
-              ? 'border-[#5a9a1f]/40 bg-ucu-green/15 text-[#3d6e12]'
-              : 'border-ucu-magenta/30 bg-ucu-magenta/8 text-[#9a0054]',
-          )}
-          role="status"
-        >
-          <strong className="font-display">{isCorrect ? '¡Correcto!' : 'No exactamente.'}</strong>{' '}
-          {quiz.explanation}
-          {!isCorrect ? (
-            <button
-              type="button"
-              className="mt-3 block font-display text-sm font-semibold text-ucu-blue underline-offset-2 hover:underline"
-              onClick={() => {
-                setSelected(null);
-                setSubmitted(false);
-              }}
-            >
-              Intentar de nuevo
-            </button>
-          ) : null}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ModuleDetail({
-  mod,
-  index,
-  completed,
-  onComplete,
-  onBack,
-  onNext,
-  onOpenCalculators,
-}: {
-  mod: EducationModule;
-  index: number;
-  completed: boolean;
-  onComplete: () => void;
-  onBack: () => void;
-  onNext: (() => void) | null;
-  onOpenCalculators: () => void;
-}) {
-  const Icon = ICONS[mod.icon];
-  const cta = mod.content.cta;
-  const ctaIsTools = cta?.href.startsWith('#calculadoras');
-
-  return (
-    <article className="ucu-animate-in">
-      <button type="button" onClick={onBack} className="ucu-btn-ghost mb-6">
-        ← Volver al recorrido
-      </button>
-
-      <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-[var(--ink-muted)]">
-        Tema {mod.id} · {mod.subtitle}
-      </p>
-      <div className="mt-3 flex items-start gap-3">
-        <span className="inline-flex rounded-md bg-ucu-blue/10 p-2.5 text-ucu-blue">
-          <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
-        </span>
-        <div>
-          <h2 className="ucu-title">{mod.title}</h2>
-          <p className="mt-1 font-display text-sm font-semibold text-ucu-magenta">{mod.urgency}</p>
-        </div>
-      </div>
-      <p className="mt-4 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
-        {mod.content.intro}
-      </p>
-
-      <aside className="mt-6 rounded-xl border border-ucu-yellow/40 bg-ucu-yellow/10 px-4 py-4 md:px-5">
-        <p className="font-display text-xs font-bold uppercase tracking-[0.16em] text-[#c48f00]">
-          {mod.content.caseStudy.title}
-        </p>
-        <p className="mt-2 font-serif text-sm leading-relaxed text-[var(--ink)]">
-          {mod.content.caseStudy.text}
-        </p>
-      </aside>
-
-      <div className="mt-8 space-y-7">
-        {mod.content.sections.map((s) => (
-          <section key={s.heading}>
-            <h3 className="font-display text-lg font-bold tracking-tight text-[var(--ink)]">
-              {s.heading}
-            </h3>
-            <p className="mt-2 max-w-prose font-serif text-[0.95rem] leading-[1.7] text-[var(--ink-muted)]">
-              {s.text}
-            </p>
-          </section>
-        ))}
-      </div>
-
-      <section className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 md:px-5">
-        <h3 className="font-display text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
-          Qué hacer ahora
-        </h3>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-          {mod.content.actions.map((action) => (
-            <li key={action}>{action}</li>
-          ))}
-        </ol>
-        {cta ? (
-          ctaIsTools ? (
-            <button type="button" onClick={onOpenCalculators} className="ucu-btn-primary mt-4">
-              {cta.label}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </button>
-          ) : (
-            <Link href={cta.href} className="ucu-btn-primary mt-4">
-              {cta.label}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          )
-        ) : null}
-      </section>
-
-      {mod.content.resources.length > 0 ? (
-        <section className="mt-6">
-          <h3 className="font-display text-sm font-bold uppercase tracking-wide text-[var(--ink)]">
-            Fuentes oficiales
-          </h3>
-          <ul className="mt-3 space-y-2">
-            {mod.content.resources.map((r) => (
-              <li key={r.href + r.label}>
-                <a
-                  href={r.href}
-                  target={r.href.startsWith('http') ? '_blank' : undefined}
-                  rel={r.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                  className="inline-flex items-start gap-2 font-serif text-sm text-ucu-blue underline-offset-2 hover:underline"
-                >
-                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span>
-                    {r.label}
-                    <span className="text-[var(--ink-faint)]"> · {r.source}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <QuizCard key={mod.id} quiz={mod.content.quiz} onComplete={onComplete} />
-
-      {completed && onNext ? (
-        <button type="button" onClick={onNext} className="ucu-btn-primary mt-4 w-full">
-          Siguiente tema
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </button>
-      ) : null}
-
-      {completed && !onNext ? (
-        <div className="mt-4 rounded-lg border border-ucu-green/40 bg-ucu-green/10 px-4 py-3 font-serif text-sm text-[#3d6e12]">
-          Completaste el recorrido. Probá las calculadoras con tus números reales para cerrar el
-          círculo.
-        </div>
-      ) : null}
-
-      <p className="mt-6 font-display text-xs text-[var(--ink-faint)]">
-        Tema {index + 1} de {EDUCATION_MODULES.length}
-      </p>
-    </article>
-  );
-}
-
-export function EducacionFinancieraApp() {
-  const [section, setSection] = useState<'home' | 'curso' | 'calculadoras'>('home');
-  const [currentModule, setCurrentModule] = useState<number | null>(null);
+  const router = useRouter();
+  const [section, setSection] = useState<AppSection>(initialSection);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [showPretest, setShowPretest] = useState(true);
+  const [showRadiography, setShowRadiography] = useState(true);
+  const [radiography, setRadiography] = useState<RadiographyResult | null>(null);
+  const [calcTool, setCalcTool] = useState<
+    RadiographyResult['profile']['calculatorHint'] | null
+  >(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -299,7 +84,13 @@ export function EducacionFinancieraApp() {
         const ids = JSON.parse(raw) as number[];
         if (Array.isArray(ids)) setCompleted(new Set(ids));
       }
-      if (localStorage.getItem(PRETEST_KEY) === '1') setShowPretest(false);
+      const saved = loadRadiography();
+      if (saved) {
+        setRadiography(saved);
+        setShowRadiography(false);
+      } else if (localStorage.getItem(RADIO_SKIP_KEY) === '1') {
+        setShowRadiography(false);
+      }
     } catch {
       /* ignore */
     }
@@ -311,48 +102,44 @@ export function EducacionFinancieraApp() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
   }, [completed, hydrated]);
 
-  const markComplete = (id: number) => {
-    setCompleted((prev) => new Set([...prev, id]));
-  };
-
-  const finishPretest = () => {
-    setShowPretest(false);
+  const skipRadiography = () => {
+    setShowRadiography(false);
     try {
-      localStorage.setItem(PRETEST_KEY, '1');
+      localStorage.setItem(RADIO_SKIP_KEY, '1');
     } catch {
       /* ignore */
     }
   };
 
+  const finishRadiography = (result: RadiographyResult) => {
+    setRadiography(result);
+    try {
+      localStorage.removeItem(RADIO_SKIP_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const continueAfterRadiography = () => {
+    setShowRadiography(false);
+  };
+
+  const openModuleById = (moduleId: number) => {
+    const mod = EDUCATION_MODULES.find((item) => item.id === moduleId);
+    if (mod) router.push(educationModulePath(mod));
+  };
+
+  const openCalculator = (tool: RadiographyResult['profile']['calculatorHint']) => {
+    setCalcTool(tool);
+    setSection('calculadoras');
+  };
+
   const goHome = () => {
-    setCurrentModule(null);
+    setCalcTool(null);
     setSection('home');
   };
 
-  if (section === 'curso' && currentModule !== null) {
-    const mod = EDUCATION_MODULES[currentModule];
-    const hasNext = currentModule < EDUCATION_MODULES.length - 1;
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-10 lg:px-6">
-        <ModuleDetail
-          mod={mod}
-          index={currentModule}
-          completed={completed.has(mod.id)}
-          onComplete={() => markComplete(mod.id)}
-          onBack={() => setCurrentModule(null)}
-          onOpenCalculators={() => {
-            setCurrentModule(null);
-            setSection('calculadoras');
-          }}
-          onNext={
-            hasNext && completed.has(mod.id)
-              ? () => setCurrentModule(currentModule + 1)
-              : null
-          }
-        />
-      </div>
-    );
-  }
+  const suggested = new Set(radiography?.profile.moduleIds ?? []);
 
   if (section === 'curso') {
     return (
@@ -369,12 +156,51 @@ export function EducacionFinancieraApp() {
           Entrá por el tema que te urge.
         </p>
 
-        {showPretest ? (
+        {showRadiography ? (
           <div className="mt-8">
-            <CoursePretest onFinished={finishPretest} onSkip={finishPretest} />
+            <FinancialRadiography
+              existing={null}
+              onFinished={finishRadiography}
+              onSkip={skipRadiography}
+              onContinue={continueAfterRadiography}
+              onCleared={() => setRadiography(null)}
+              onOpenModule={openModuleById}
+              onOpenCalculator={openCalculator}
+            />
           </div>
         ) : (
           <>
+            {radiography ? (
+              <div className="mt-8 rounded-xl border border-ucu-blue/25 bg-ucu-blue/[0.06] px-4 py-4 md:px-5">
+                <p className="font-display text-xs font-bold uppercase tracking-[0.16em] text-ucu-blue">
+                  Según tu radiografía
+                </p>
+                <p className="mt-1 font-display text-base font-bold text-[var(--ink)]">
+                  {radiography.profile.title}
+                </p>
+                <p className="mt-1 font-serif text-sm text-[var(--ink-muted)]">
+                  Marcamos los módulos sugeridos abajo. Podés abrir tu resultado completo o ir a la
+                  calculadora recomendada.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSection('radiografia')}
+                    className="ucu-btn-ghost"
+                  >
+                    Ver resultado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openCalculator(radiography.profile.calculatorHint)}
+                    className="ucu-btn-secondary"
+                  >
+                    Calculadora sugerida
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-8">
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <p className="font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
@@ -390,45 +216,52 @@ export function EducacionFinancieraApp() {
               </p>
 
               <ul className="mt-6 flex flex-col gap-2.5">
-                {EDUCATION_MODULES.map((m, i) => {
-                  const done = completed.has(m.id);
-                  const Icon = ICONS[m.icon];
+                {EDUCATION_MODULES.map((mod) => {
+                  const done = completed.has(mod.id);
+                  const isSuggested = suggested.has(mod.id);
+                  const Icon = ICONS[mod.icon];
 
                   return (
-                    <li key={m.id}>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentModule(i)}
+                    <li key={mod.id}>
+                      <Link
+                        href={educationModulePath(mod)}
                         className={cn(
                           'flex w-full items-center gap-3.5 rounded-xl border px-4 py-4 text-left transition',
                           done
                             ? 'border-ucu-green/35 bg-ucu-green/10'
-                            : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
+                            : isSuggested
+                              ? 'border-ucu-magenta/35 bg-ucu-magenta/[0.06] hover:border-ucu-magenta/50'
+                              : 'border-[var(--border)] bg-[var(--surface-raised)] hover:border-ucu-blue/30 hover:shadow-ucu',
                         )}
                       >
                         <span
                           className={cn(
                             'inline-flex shrink-0 rounded-md p-2.5',
-                            done ? 'bg-ucu-green/20 text-[#3d6e12]' : 'bg-ucu-blue/10 text-ucu-blue',
+                            done
+                              ? 'bg-ucu-green/20 text-[#3d6e12]'
+                              : isSuggested
+                                ? 'bg-ucu-magenta/15 text-ucu-magenta'
+                                : 'bg-ucu-blue/10 text-ucu-blue',
                           )}
                         >
                           <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                            Módulo {m.id} · {m.subtitle}
+                            Módulo {mod.id} · {mod.subtitle}
+                            {isSuggested && !done ? ' · Sugerido' : ''}
                           </span>
                           <span className="mt-0.5 block font-display text-base font-bold tracking-tight text-[var(--ink)]">
-                            {m.title}
+                            {mod.title}
                           </span>
                           <span className="mt-1 block font-serif text-xs text-[var(--ink-muted)]">
-                            {m.urgency}
+                            {mod.urgency}
                           </span>
                         </span>
                         {done ? (
                           <Check className="h-5 w-5 shrink-0 text-[#3d6e12]" aria-label="Completado" />
                         ) : null}
-                      </button>
+                      </Link>
                     </li>
                   );
                 })}
@@ -448,22 +281,48 @@ export function EducacionFinancieraApp() {
           <button type="button" onClick={() => setSection('calculadoras')} className="ucu-btn-secondary">
             Ir a calculadoras
           </button>
-          {!showPretest ? (
+          {!showRadiography ? (
             <button
               type="button"
               onClick={() => {
-                setShowPretest(true);
+                setShowRadiography(true);
+                setRadiography(null);
                 try {
-                  localStorage.removeItem(PRETEST_KEY);
+                  localStorage.removeItem(RADIO_SKIP_KEY);
+                  clearRadiography();
                 } catch {
                   /* ignore */
                 }
               }}
               className="ucu-btn-ghost"
             >
-              Repetir diagnóstico
+              {radiography ? 'Repetir radiografía' : 'Hacer radiografía'}
             </button>
           ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (section === 'radiografia') {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 lg:px-6">
+        <button type="button" onClick={goHome} className="ucu-btn-ghost mb-6">
+          ← Volver al inicio
+        </button>
+        <FinancialRadiography
+          existing={radiography}
+          onFinished={finishRadiography}
+          onSkip={() => setSection('curso')}
+          onContinue={() => setSection('curso')}
+          onCleared={() => setRadiography(null)}
+          onOpenModule={openModuleById}
+          onOpenCalculator={openCalculator}
+        />
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button type="button" onClick={() => setSection('curso')} className="ucu-btn-secondary">
+            Ir al curso
+          </button>
         </div>
       </div>
     );
@@ -475,7 +334,7 @@ export function EducacionFinancieraApp() {
         <button type="button" onClick={goHome} className="ucu-btn-ghost mb-6">
           ← Volver al inicio
         </button>
-        <EducationCalculators />
+        <EducationCalculators key={calcTool ?? 'menu'} initialTool={calcTool} />
         <div className="mt-8 flex flex-wrap gap-3">
           <button type="button" onClick={() => setSection('curso')} className="ucu-btn-secondary">
             Ir al curso
@@ -514,9 +373,33 @@ export function EducacionFinancieraApp() {
       </header>
 
       <nav
-        className="ucu-animate-in ucu-animate-in-delay-1 mt-8 grid gap-4 sm:grid-cols-2"
+        className="ucu-animate-in ucu-animate-in-delay-1 mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         aria-label="Elegí por dónde empezar"
       >
+        <button
+          type="button"
+          onClick={() => {
+            setShowRadiography(true);
+            setSection('radiografia');
+          }}
+          className="ucu-card-interactive ucu-accent-top group flex flex-col p-6 text-left md:p-7"
+        >
+          <span className="mb-4 inline-flex w-fit rounded-md bg-ucu-magenta/12 p-3 text-ucu-magenta">
+            <ScanSearch className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+          </span>
+          <span className="font-display text-xl font-bold tracking-tight text-[var(--ink)] group-hover:text-ucu-blue">
+            Radiografía
+          </span>
+          <span className="mt-2 flex-1 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
+            {radiography
+              ? 'Ya tenés un resultado guardado. Revisalo o volvé a hacerlo.'
+              : '14 preguntas sobre hábitos de compra, crédito y tasas. Te armamos un itinerario.'}
+          </span>
+          <span className="mt-5 font-display text-sm font-semibold text-ucu-magenta">
+            {radiography ? 'Ver resultado →' : 'Hacer diagnóstico →'}
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={() => setSection('curso')}
@@ -529,8 +412,8 @@ export function EducacionFinancieraApp() {
             Curso práctico
           </span>
           <span className="mt-2 flex-1 font-serif text-sm leading-relaxed text-[var(--ink-muted)]">
-            Ocho módulos con diagnóstico, plantillas y fuentes oficiales. Foco en plata cotidiana:
-            presupuesto, tasas, deudas y cómo no firmar a ciegas.
+            Ocho módulos con plantillas y fuentes oficiales. Foco en presupuesto, tasas, deudas y
+            cómo no firmar a ciegas.
           </span>
           <span className="mt-5 font-display text-sm font-semibold text-ucu-magenta">
             Empezar recorrido →
@@ -539,8 +422,11 @@ export function EducacionFinancieraApp() {
 
         <button
           type="button"
-          onClick={() => setSection('calculadoras')}
-          className="ucu-card-interactive ucu-accent-top group flex flex-col p-6 text-left md:p-7"
+          onClick={() => {
+            setCalcTool(null);
+            setSection('calculadoras');
+          }}
+          className="ucu-card-interactive ucu-accent-top group flex flex-col p-6 text-left md:p-7 sm:col-span-2 lg:col-span-1"
         >
           <span className="mb-4 inline-flex w-fit rounded-md bg-ucu-yellow/20 p-3 text-[#c48f00]">
             <Calculator className="h-6 w-6" strokeWidth={1.75} aria-hidden />
@@ -557,6 +443,32 @@ export function EducacionFinancieraApp() {
           </span>
         </button>
       </nav>
+
+      <section className="mt-12" aria-labelledby="temas-heading">
+        <h2 id="temas-heading" className="font-display text-xl font-bold tracking-tight text-[var(--ink)]">
+          Los 8 temas del curso
+        </h2>
+        <p className="mt-2 font-serif text-sm text-[var(--ink-muted)]">
+          Cada módulo es una página pública: se puede leer, compartir y citar sin pasar por la app.
+        </p>
+        <ol className="mt-5 grid gap-2 sm:grid-cols-2">
+          {EDUCATION_MODULES.map((mod) => (
+            <li key={mod.id}>
+              <Link
+                href={educationModulePath(mod)}
+                className="block rounded-lg border border-[var(--border)] px-4 py-3 transition hover:border-ucu-blue/40 hover:bg-[var(--surface-muted)]"
+              >
+                <span className="font-display text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--ink-faint)]">
+                  Módulo {mod.id}
+                </span>
+                <span className="mt-0.5 block font-display text-sm font-bold text-[var(--ink)]">
+                  {mod.title}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <p className="mt-8 text-center font-serif text-xs leading-relaxed text-[var(--ink-faint)]">
         Contenido educativo general. No constituye asesoramiento financiero profesional. Consultá

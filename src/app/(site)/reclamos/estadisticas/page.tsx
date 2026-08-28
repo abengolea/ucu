@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EstadisticasBusqueda } from '@/components/reclamos/EstadisticasBusqueda';
-import { buildPageMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
+
+const DESCRIPTION =
+  'Consultá cuántas denuncias de consumo recibió UCU contra una empresa e informate con un PDF certificable verificable en ucu.org.ar.';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Estadísticas de denuncias por empresa',
-  description:
-    'Consultá cuántas denuncias de consumo recibió UCU contra una empresa e informate con un PDF certificable verificable en ucu.org.ar.',
+  description: DESCRIPTION,
   path: '/reclamos/estadisticas',
   keywords: [
     'estadísticas denuncias',
@@ -19,6 +22,20 @@ export const metadata: Metadata = buildPageMetadata({
 export default function EstadisticasPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 lg:px-6">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            title: 'Estadísticas de denuncias por empresa',
+            description: DESCRIPTION,
+            path: '/reclamos/estadisticas',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Denuncias', path: '/reclamos' },
+            { name: 'Estadísticas', path: '/reclamos/estadisticas' },
+          ]),
+        ]}
+      />
       <PageHeader
         eyebrow="Datos públicos"
         title="Estadísticas de denuncias"

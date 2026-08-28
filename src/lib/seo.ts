@@ -162,11 +162,25 @@ export function organizationJsonLd() {
     logo: absoluteUrl('/brand/logo-ucu.png'),
     description: DEFAULT_DESCRIPTION,
     email: 'info@ucu.org.ar',
+    telephone: '+54-9-336-4457314',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'Belgrano 163 bis',
+      addressLocality: 'San Nicolás de los Arroyos',
+      addressRegion: 'Buenos Aires',
+      addressCountry: 'AR',
+    },
     areaServed: {
       '@type': 'Country',
       name: 'Argentina',
     },
-    sameAs: ['https://www.ucu.org.ar'],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'info@ucu.org.ar',
+      telephone: '+54-9-336-4457314',
+      contactType: 'customer support',
+      availableLanguage: ['Spanish'],
+    },
     knowsAbout: [
       'Defensa del consumidor',
       'Planes de ahorro automotor',
@@ -318,4 +332,82 @@ export function collectionPageJsonLd({
   path: string;
 }) {
   return webPageJsonLd({ title, description, path, type: 'CollectionPage' });
+}
+
+export function legalDocumentJsonLd({
+  title,
+  description,
+  path,
+  datePublished,
+  dateModified,
+  court,
+  about,
+  keywords,
+}: {
+  title: string;
+  description: string;
+  path: string;
+  datePublished?: string;
+  dateModified?: string;
+  court?: string;
+  about?: string[];
+  keywords?: string[];
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    additionalType: 'https://schema.org/Legislation',
+    headline: title,
+    description,
+    url: absoluteUrl(path),
+    mainEntityOfPage: absoluteUrl(path),
+    inLanguage: 'es-AR',
+    datePublished,
+    dateModified: dateModified || datePublished,
+    articleSection: 'Jurisprudencia de consumo',
+    isAccessibleForFree: true,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Usuarios y Consumidores Unidos',
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/brand/logo-ucu.png'),
+      },
+    },
+    ...(court ? { sourceOrganization: { '@type': 'Court', name: court } } : {}),
+    ...(about?.length ? { about: about.map((name) => ({ '@type': 'Thing', name })) } : {}),
+    ...(keywords?.length ? { keywords: keywords.join(', ') } : {}),
+  };
+}
+
+export function datasetJsonLd({
+  title,
+  description,
+  path,
+  variableMeasured,
+  measurement,
+  dateModified,
+}: {
+  title: string;
+  description: string;
+  path: string;
+  variableMeasured: string;
+  measurement?: string;
+  dateModified?: string;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: title,
+    description,
+    url: absoluteUrl(path),
+    inLanguage: 'es-AR',
+    isAccessibleForFree: true,
+    creator: { '@id': `${getSiteUrl()}/#organization` },
+    publisher: { '@id': `${getSiteUrl()}/#organization` },
+    variableMeasured,
+    ...(measurement ? { measurementTechnique: measurement } : {}),
+    ...(dateModified ? { dateModified } : {}),
+    license: absoluteUrl('/'),
+  };
 }

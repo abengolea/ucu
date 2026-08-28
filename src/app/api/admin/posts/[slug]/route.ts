@@ -101,6 +101,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   await batch.commit();
   await upsertTags(db, tags);
 
+  if (post.status === 'publish') {
+    const { notifyIndexNow } = await import('@/lib/indexnow');
+    notifyIndexNow([`/posts/${newSlug}`]);
+  }
+
   return NextResponse.json({
     ok: true,
     slug: newSlug,

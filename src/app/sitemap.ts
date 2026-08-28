@@ -1,7 +1,15 @@
 import type { MetadataRoute } from 'next';
-import { getAllPosts, getCategories } from '@/lib/content';
 import { getSiteUrl } from '@/lib/seo';
-import { isFirebaseConfigured } from '@/lib/utils';
+import {
+  educationModuleSitemapEntries,
+  getCategorySitemapEntries,
+  getEmpresaSitemapEntries,
+  getFalloSitemapEntries,
+  getPageSitemapEntries,
+  getPostSitemapEntries,
+} from '@/lib/sitemap-data';
+
+export const revalidate = 3600;
 
 const STATIC_ROUTES: Array<{
   path: string;
@@ -43,6 +51,7 @@ const STATIC_ROUTES: Array<{
     changeFrequency: 'monthly',
     priority: 0.85,
   },
+  { path: '/feed.xml', changeFrequency: 'daily', priority: 0.4 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -56,43 +65,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route.priority,
   }));
 
-  if (!isFirebaseConfigured()) {
-    return entries;
-  }
+  const seen = new Set(entries.map((entry) => entry.url));
+
+  const push = (
+    path: string,
+    lastModified: Date,
+    changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'],
+    priority: number
+  ) => {
+    const url = `${base}${path}`;
+    if (seen.has(url)) return;
+    seen.add(url);
+    entries.push({ url, lastModified, changeFrequency, priority });
+  };
 
   try {
-    const [posts, categories] = await Promise.all([
-      getAllPosts(500),
-      getCategories(),
+    const [posts, categories, pages, fallos, empresas] = await Promise.all([
+      getPostSitemapEntries(250),
+      getCategorySitemapEntries(),
+      getPageSitemapEntries(),
+      getFalloSitemapEntries(400),
+      getEmpresaSitemapEntries(200),
     ]);
 
     for (const post of posts) {
-      entries.push({
-        url: `${base}/posts/${post.slug}`,
-        lastModified: post.modifiedAt ? new Date(post.modifiedAt) : now,
-        changeFrequency: 'weekly',
-        priority: 0.7,
-      });
+      push(post.path, post.lastModified, 'weekly', 0.7);
     }
-
-    const staticCategoryPaths = new Set(
-      STATIC_ROUTES.filter((r) => r.path.startsWith('/categoria/')).map(
-        (r) => r.path
-      )
-    );
-
     for (const category of categories) {
-      const path = `/categoria/${category.slug}`;
-      if (staticCategoryPaths.has(path)) continue;
-      entries.push({
-        url: `${base}${path}`,
-        lastModified: now,
-        changeFrequency: 'weekly',
-        priority: 0.6,
-      });
+      push(category.path, category.lastModified, 'weekly', 0.6);
     }
-  } catch {
-    // Sitemap estático si Firestore no responde en build/runtime.
+    for (const page of pages) {
+      push(page.path, page.lastModified, 'monthly', 0.5);
+    }
+    for (const fallo of fallos) {
+      push(fallo.path, fallo.lastModified, 'monthly', 0.65);
+    }
+    for (const empresa of empresas) {
+      push(empresa.path, empresa.lastModified, 'weekly', 0.7);
+    }
+    for (const mod of educationModuleSitemapEntries()) {
+      push(mod.path, mod.lastModified, 'monthly', 0.75);
+    }
+  } catch (error) {
+    console.error('[sitemap] fallback to static routes', error);
   }
 
   return entries;

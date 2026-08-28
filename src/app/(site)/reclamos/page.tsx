@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner';
 import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { buildPageMetadata } from '@/lib/seo';
+import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
+
+const DESCRIPTION =
+  'Presentá tu denuncia de consumo en forma gratuita. UCU la registra y, según el caso, puede contactarte para asesorarte u orientarte.';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Usuarios Protegidos — Denuncias',
-  description:
-    'Presentá tu denuncia de consumo en forma gratuita. UCU la registra y, según el caso, puede contactarte para asesorarte u orientarte.',
+  description: DESCRIPTION,
   path: '/reclamos',
   keywords: [
     'denuncia de consumo',
@@ -21,6 +24,19 @@ export const metadata: Metadata = buildPageMetadata({
 export default function ReclamosPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-12 lg:px-6">
+      <JsonLd
+        data={[
+          webPageJsonLd({
+            title: 'Denuncias de consumo',
+            description: DESCRIPTION,
+            path: '/reclamos',
+          }),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Denuncias', path: '/reclamos' },
+          ]),
+        ]}
+      />
       <PageHeader
         eyebrow="Usuarios Protegidos"
         title="Denuncias de consumo"
