@@ -32,6 +32,7 @@ import {
 } from '@/lib/reclamos-admin';
 import {
   notifyAsignacionAceptada,
+  notifyAsignacionInmediata,
   notifyAsignacionPropuesta,
   notifyAsignacionRechazada,
   runAsignacionNotify,
@@ -580,7 +581,7 @@ export async function iniciarGestionReclamo(
   id: number,
   operator: { email: string; name: string },
   estados: ReclamoEstado[]
-): Promise<StoredReclamoDocument> {
+): Promise<AsignacionNotifyResult> {
   const db = dbOrThrow();
   const ref = db.collection('reclamos').doc(String(id));
   const snap = await ref.get();
@@ -640,7 +641,10 @@ export async function iniciarGestionReclamo(
 
   await ref.set(updated, { merge: true });
   const fresh = await ref.get();
-  return fresh.data() as StoredReclamoDocument;
+  const reclamo = { ...(fresh.data() as StoredReclamoDocument), id };
+  return runAsignacionNotify(reclamo, 'inmediata', () =>
+    notifyAsignacionInmediata(reclamo, operator)
+  );
 }
 
 export async function addReclamoComentario(
@@ -797,7 +801,9 @@ export async function reasignarReclamo(
       `Caso tomado por ${assignee.name} (antes: ${prevName})`,
       estados
     );
-    return { reclamo };
+    return runAsignacionNotify({ ...reclamo, id }, 'inmediata', () =>
+      notifyAsignacionInmediata({ ...reclamo, id }, assignee)
+    );
   }
 
   const db = dbOrThrow();

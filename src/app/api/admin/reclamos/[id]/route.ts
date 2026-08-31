@@ -155,8 +155,16 @@ export async function PATCH(
 
     if (body?.iniciarGestion === true) {
       const estados = await getReclamoEstadosFromFirestore();
-      const reclamo = await iniciarGestionReclamo(reclamoId, operator, estados);
-      return NextResponse.json({ ok: true, reclamo: withBandeja(reclamo) });
+      const { reclamo, emailError } = await iniciarGestionReclamo(
+        reclamoId,
+        operator,
+        estados
+      );
+      return NextResponse.json({
+        ok: true,
+        reclamo: withBandeja(reclamo),
+        emailError: emailError ?? null,
+      });
     }
 
     if (body?.archivar === true) {

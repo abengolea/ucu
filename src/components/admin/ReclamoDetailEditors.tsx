@@ -216,6 +216,8 @@ export function ReclamoResponsableCard({
         setNotice(
           `Se envió un mail a ${data.reclamo.asignacionPendiente.email} para que acepte el caso.`
         );
+      } else if (data.reclamo?.responsable?.email) {
+        setNotice(`Se envió un mail a ${data.reclamo.responsable.email} con el caso asignado.`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado');

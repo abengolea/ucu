@@ -168,6 +168,9 @@ export default function AdminReclamoDetailPage() {
       } else {
         await load();
       }
+      if (typeof data.emailError === 'string' && data.emailError) {
+        setError(data.emailError);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {

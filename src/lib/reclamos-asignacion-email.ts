@@ -37,6 +37,27 @@ function detailUrl(reclamoId: number): string {
   return `${getSiteUrl()}/admin/reclamos/${reclamoId}`;
 }
 
+export async function notifyAsignacionInmediata(
+  reclamo: StoredReclamoDocument,
+  assignee: { email: string; name: string }
+): Promise<void> {
+  const url = detailUrl(reclamo.id);
+  await sendEmail({
+    to: assignee.email,
+    subject: `UCU — Caso #${reclamo.id} asignado a vos`,
+    body: `Hola ${assignee.name},
+
+Quedaste como responsable del reclamo ${caseLabel(reclamo)}.
+
+Abrí el caso:
+
+${url}
+
+— UCU Admin`,
+    reclamoId: reclamo.id,
+  });
+}
+
 export async function notifyAsignacionPropuesta(
   reclamo: StoredReclamoDocument,
   assignee: { email: string; name: string },
