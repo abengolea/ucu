@@ -24,6 +24,7 @@ import {
 } from '@/components/admin/ReclamoDetailEditors';
 import { ReclamoEnlacesRapidos } from '@/components/admin/ReclamoEnlacesRapidos';
 import { RegistrarSinGestionModal } from '@/components/admin/RegistrarSinGestionModal';
+import { getAdminReclamosReturnHref } from '@/lib/admin-reclamos-filters';
 import { formatReclamoTitulo } from '@/lib/reclamos-display';
 
 export default function AdminReclamoDetailPage() {
@@ -33,6 +34,7 @@ export default function AdminReclamoDetailPage() {
   const [canWrite, setCanWrite] = useState(false);
   const [canDecideAsignacion, setCanDecideAsignacion] = useState(false);
 
+  const [listHref, setListHref] = useState('/admin/reclamos');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -97,6 +99,10 @@ export default function AdminReclamoDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setListHref(getAdminReclamosReturnHref());
+  }, []);
 
   const loadSugerencias = useCallback(async () => {
     if (!canWrite) return;
@@ -328,7 +334,7 @@ export default function AdminReclamoDetailPage() {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
         <p className="text-lg font-semibold text-slate-800">Reclamo no encontrado</p>
-        <Link href="/admin/reclamos" className="mt-4 inline-block text-[#1a5fb4] hover:underline">
+        <Link href={listHref} className="mt-4 inline-block text-[#1a5fb4] hover:underline">
           Volver al listado
         </Link>
       </div>
@@ -362,7 +368,7 @@ export default function AdminReclamoDetailPage() {
       ) : null}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href="/admin/reclamos" className="text-sm font-semibold text-[#1a5fb4] hover:underline">
+          <Link href={listHref} className="text-sm font-semibold text-[#1a5fb4] hover:underline">
             ← Reclamos
           </Link>
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">

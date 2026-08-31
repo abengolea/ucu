@@ -1,14 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Archive, Loader2 } from 'lucide-react';
+import { Archive, Loader2, X } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
 import {
   QuickEditEmpresasButton,
   ReclamoEmpresasQuickEdit,
 } from '@/components/admin/ReclamoEmpresasQuickEdit';
 import { RegistrarSinGestionModal } from '@/components/admin/RegistrarSinGestionModal';
+import {
+  defaultAdminReclamosFilters,
+  hasActiveAdminReclamosFilters,
+  persistAdminReclamosFilters,
+  readAdminReclamosFilters,
+} from '@/lib/admin-reclamos-filters';
 import type {
   ReclamoAdminBandeja,
   ReclamoAsignacionPendiente,
@@ -97,12 +104,12 @@ export function AdminReclamosList({
   emptyDescription,
 }: AdminReclamosListProps) {
   const user = useAdminUser();
+  const pathname = usePathname();
   const canWriteReclamos = user.permissions.includes('reclamos:write');
   const writeScopeAll = user.reclamosWriteScope === 'all';
+  const defaults = defaultAdminReclamosFilters(mode);
 
-  const [bandeja, setBandeja] = useState<ReclamoAdminBandeja | 'todos'>(
-    mode === 'assigned' ? 'todos' : 'recibidos'
-  );
+  const [bandeja, setBandeja] = useState<ReclamoAdminBandeja | 'todos'>(defaults.bandeja);
   const [responsableInput, setResponsableInput] = useState('');
   const [responsableQuery, setResponsableQuery] = useState('');
   const [provinciaId, setProvinciaId] = useState('');
@@ -119,15 +126,46 @@ export function AdminReclamosList({
   const [assignedCount, setAssignedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [filtersReady, setFiltersReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [editingEmpresasId, setEditingEmpresasId] = useState<number | null>(null);
   const [registrarTarget, setRegistrarTarget] = useState<AdminReclamoListItem | null>(null);
 
+  const filtersActive = hasActiveAdminReclamosFilters({
+    bandeja,
+    query,
+    responsableInput,
+    provinciaId,
+    ciudadId,
+  });
+
   const filterByResponsable = mode === 'all' && Boolean(responsableQuery);
   const filterByLocation = Boolean(provinciaId) || Boolean(ciudadId);
   const apiBandeja: ReclamoAdminBandeja | 'todos' =
     mode === 'assigned' || filterByResponsable || filterByLocation ? 'todos' : bandeja;
+
+  useEffect(() => {
+    const stored = readAdminReclamosFilters(mode);
+    if (stored) {
+      setBandeja(stored.bandeja);
+      setQuery(stored.query);
+      setResponsableInput(stored.responsableInput);
+      setResponsableQuery(stored.responsableInput.trim());
+      setProvinciaId(stored.provinciaId);
+      setCiudadId(stored.ciudadId);
+    }
+    setFiltersReady(true);
+  }, [mode]);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    persistAdminReclamosFilters(
+      mode,
+      { bandeja, query, responsableInput, provinciaId, ciudadId },
+      pathname
+    );
+  }, [filtersReady, mode, pathname, bandeja, query, responsableInput, provinciaId, ciudadId]);
 
   useEffect(() => {
     if (mode !== 'all') return;
@@ -160,15 +198,37 @@ export function AdminReclamosList({
   useEffect(() => {
     if (!provinciaId) {
       setCiudades([]);
-      setCiudadId('');
+      setCiudadId((current) => (current ? '' : current));
       return;
     }
-    setCiudadId('');
+    let cancelled = false;
     fetch(`/api/reclamos/catalogos/ciudades?idProvincia=${encodeURIComponent(provinciaId)}`)
       .then((res) => (res.ok ? res.json() : []))
-      .then((data: ReclamoCiudad[]) => setCiudades(Array.isArray(data) ? data : []))
-      .catch(() => setCiudades([]));
+      .then((data: ReclamoCiudad[]) => {
+        if (cancelled) return;
+        const list = Array.isArray(data) ? data : [];
+        setCiudades(list);
+        setCiudadId((current) =>
+          current && list.some((ciudad) => String(ciudad.id) === current) ? current : ''
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setCiudades([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [provinciaId]);
+
+  function clearFilters() {
+    const next = defaultAdminReclamosFilters(mode);
+    setBandeja(next.bandeja);
+    setQuery('');
+    setResponsableInput('');
+    setResponsableQuery('');
+    setProvinciaId('');
+    setCiudadId('');
+  }
 
   function canArchiveReclamo(reclamo: AdminReclamoListItem): boolean {
     if (!canWriteReclamos || reclamo.adminBandeja === 'archivados') return false;
@@ -240,8 +300,9 @@ export function AdminReclamosList({
   }, [mode, apiBandeja, responsableQuery, provinciaId, ciudadId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!filtersReady) return;
+    void load();
+  }, [load, filtersReady]);
 
   const clientBandejaSource =
     mode === 'assigned' || filterByResponsable || filterByLocation ? reclamos : [];
@@ -347,7 +408,10 @@ export function AdminReclamosList({
           <span className="font-semibold text-slate-700">Provincia</span>
           <select
             value={provinciaId}
-            onChange={(e) => setProvinciaId(e.target.value)}
+            onChange={(e) => {
+              setProvinciaId(e.target.value);
+              setCiudadId('');
+            }}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
           >
             <option value="">Todas</option>
@@ -385,16 +449,14 @@ export function AdminReclamosList({
             />
           </label>
         ) : null}
-        {filterByLocation ? (
+        {filtersActive ? (
           <button
             type="button"
-            onClick={() => {
-              setProvinciaId('');
-              setCiudadId('');
-            }}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Limpiar ubicación
+            <X className="h-3.5 w-3.5" aria-hidden />
+            Limpiar filtros
           </button>
         ) : null}
       </div>
@@ -411,8 +473,24 @@ export function AdminReclamosList({
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-lg font-semibold text-slate-800">{emptyTitle}</p>
-          <p className="mt-2 text-sm text-slate-500">{emptyDescription}</p>
+          <p className="text-lg font-semibold text-slate-800">
+            {filtersActive ? 'Ningún reclamo coincide con los filtros' : emptyTitle}
+          </p>
+          <p className="mt-2 text-sm text-slate-500">
+            {filtersActive
+              ? 'Probá ajustar la búsqueda o limpiá los filtros para ver el resto de la bandeja.'
+              : emptyDescription}
+          </p>
+          {filtersActive ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              Limpiar filtros
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
