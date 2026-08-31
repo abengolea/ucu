@@ -7,6 +7,7 @@ import {
 } from '@/components/admin/AdminReclamoAlerts';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { SidebarProvider, useSidebar } from '@/components/admin/AdminSidebarContext';
+import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
 import { cn } from '@/lib/utils';
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
@@ -23,14 +24,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           collapsed ? 'lg:pl-[68px]' : 'lg:pl-64'
         )}
       >
-        <div className="pointer-events-none fixed right-4 top-3 z-40 hidden lg:block">
-          <div className="pointer-events-auto">
-            <AdminReclamoAlertBell className="bg-white shadow-sm ring-1 ring-slate-200" />
-          </div>
-        </div>
+        <header className="sticky top-0 z-40 hidden items-center justify-end gap-2 bg-slate-100 px-4 py-2.5 lg:flex">
+          <AdminReclamoAlertBell className="bg-white shadow-sm ring-1 ring-slate-200" />
+          <AdminUserMenu />
+        </header>
         <main
           className={cn(
-            'mx-auto px-4 py-6 lg:px-8 lg:py-8',
+            'mx-auto px-4 py-6 lg:px-8 lg:pb-8 lg:pt-4',
             wideContent ? 'max-w-[1600px]' : 'max-w-6xl'
           )}
         >
