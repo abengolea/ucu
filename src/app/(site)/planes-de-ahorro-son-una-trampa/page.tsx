@@ -14,7 +14,7 @@ import { extractBackgroundImages } from '@/lib/wordpress-html';
 
 const CAMPAIGN_PATH = '/planes-de-ahorro-son-una-trampa';
 const CAMPAIGN_DESCRIPTION =
-  'Campaña nacional de UCU por la reforma integral del sistema de planes de ahorro automotor. Exigencias, recursos, FAQ y asesoramiento para ahorristas afectados.';
+  'Un plan de ahorro automotor no es un crédito: es un sistema de capitalización en grupo. UCU exige su reforma integral y publica recursos, fallos y FAQ para ahorristas.';
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getPageBySlug('planes-de-ahorro-son-una-trampa').catch(() => null);

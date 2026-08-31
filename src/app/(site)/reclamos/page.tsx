@@ -3,10 +3,10 @@ import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner
 import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { GEO_RECLAMO } from '@/lib/geo-answers';
 import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
 
-const DESCRIPTION =
-  'Presentá tu denuncia de consumo en forma gratuita. UCU la registra y, según el caso, puede contactarte para asesorarte u orientarte.';
+const DESCRIPTION = GEO_RECLAMO;
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Usuarios Protegidos — Denuncias',
@@ -40,7 +40,7 @@ export default function ReclamosPage() {
       <PageHeader
         eyebrow="Usuarios Protegidos"
         title="Denuncias de consumo"
-        description="Sistema gratuito para presentar tu denuncia y registrarla ante UCU. Es un mensaje que llega a la organización: según el caso, podemos contactarte para asesorarte, orientarte o dar respuesta. El registro queda como base de datos institucional."
+        description={GEO_RECLAMO}
         className="text-center [&_h1]:mx-auto [&_p]:mx-auto"
       />
 

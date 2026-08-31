@@ -128,6 +128,8 @@ export function SiteFooter() {
               { href: '/categoria/alertas-de-fraude', label: 'Alertas de fraude' },
               { href: '/categoria/acciones-colectivas', label: 'Acciones colectivas' },
               { href: '/educacion-financiera', label: 'Educación financiera' },
+              { href: '/preguntas-frecuentes', label: 'Preguntas frecuentes' },
+              { href: '/quienes-somos', label: 'Quiénes somos' },
               { href: '/feed.xml', label: 'RSS' },
             ].map((item) => (
               <li key={item.href}>
@@ -213,9 +215,10 @@ export function HeroSection() {
             <h1 className="mb-5 font-display text-[clamp(2.25rem,1.5rem+3.5vw,3.75rem)] font-extrabold leading-[1.05] tracking-tight">
               Defendemos tus derechos como consumidor
             </h1>
-            <p className="mb-8 max-w-lg font-serif text-base leading-relaxed text-white/75 md:text-lg">
-              Presentá tu denuncia, consultá estadísticas por empresa y conocé
-              alertas, campañas y recursos para ejercer tus derechos en todo el país.
+            <p className="mb-8 max-w-lg font-serif text-base leading-relaxed text-white/80 md:text-lg">
+              UCU es la red pública de defensa del consumidor en Argentina: presentá
+              una denuncia gratuita, consultá cuántos reclamos hay contra una empresa
+              y leé fallos y alertas.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/reclamos/nuevo" className="ucu-btn-primary">

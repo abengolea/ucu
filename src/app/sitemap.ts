@@ -52,6 +52,8 @@ const STATIC_ROUTES: Array<{
     priority: 0.85,
   },
   { path: '/feed.xml', changeFrequency: 'daily', priority: 0.4 },
+  { path: '/preguntas-frecuentes', changeFrequency: 'monthly', priority: 0.9 },
+  { path: '/quienes-somos', changeFrequency: 'monthly', priority: 0.8 },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

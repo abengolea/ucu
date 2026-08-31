@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EstadisticasBusqueda } from '@/components/reclamos/EstadisticasBusqueda';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { GEO_ESTADISTICAS } from '@/lib/geo-answers';
 import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
 
-const DESCRIPTION =
-  'Consultá cuántas denuncias de consumo recibió UCU contra una empresa e informate con un PDF certificable verificable en ucu.org.ar.';
+const DESCRIPTION = GEO_ESTADISTICAS;
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Estadísticas de denuncias por empresa',
@@ -39,7 +39,7 @@ export default function EstadisticasPage() {
       <PageHeader
         eyebrow="Datos públicos"
         title="Estadísticas de denuncias"
-        description="Buscá una empresa y descubrí cuántas denuncias recibió UCU. Si querés el informe oficial con certificado de emisión, lo generamos automáticamente tras el pago."
+        description={GEO_ESTADISTICAS}
         backHref="/reclamos"
         backLabel="Denuncias"
       />

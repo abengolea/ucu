@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { EducacionFinancieraApp } from '@/components/educacion-financiera/EducacionFinancieraApp';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { EDUCATION_MODULES, educationModulePath } from '@/lib/educacion-financiera/modules';
+import { GEO_EDUCACION } from '@/lib/geo-answers';
 import {
   breadcrumbJsonLd,
   buildPageMetadata,
@@ -10,8 +11,7 @@ import {
 } from '@/lib/seo';
 
 const PATH = '/educacion-financiera';
-const DESCRIPTION =
-  'Curso gratuito de educación financiera para consumidores argentinos: presupuesto, crédito, tasas de interés, sobreendeudamiento, cuentas y medios de pago. Con calculadoras, plantillas y fuentes oficiales (BCRA, CNV, UCU).';
+const DESCRIPTION = GEO_EDUCACION;
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Educación financiera',

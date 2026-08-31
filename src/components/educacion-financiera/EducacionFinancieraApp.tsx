@@ -367,7 +367,9 @@ export function EducacionFinancieraApp({
             Tu plata, tus reglas.
           </h1>
           <p className="mt-3 max-w-md font-serif text-base leading-relaxed text-white/85">
-            Aprendé finanzas personales o calculá antes de firmar. ¿Por dónde querés empezar?
+            Educación financiera de UCU es un curso gratuito para consumidores argentinos:
+            presupuesto, crédito, tasas y sobreendeudamiento, con calculadoras y fuentes
+            oficiales.
           </p>
         </div>
       </header>

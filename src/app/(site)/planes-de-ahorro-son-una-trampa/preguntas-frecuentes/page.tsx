@@ -12,7 +12,7 @@ import {
 
 const FAQ_PATH = '/planes-de-ahorro-son-una-trampa/preguntas-frecuentes';
 const FAQ_DESCRIPTION =
-  'Respuestas claras sobre contratación, entrega de unidades, aumentos, mora y liquidación final en planes de ahorro automotor. Guía de UCU para ahorristas.';
+  'Un plan de ahorro automotor no es un crédito: la cuota se mueve con el auto y el grupo. Acá respondemos contratación, entrega, aumentos, mora y liquidación final.';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Preguntas frecuentes — Planes de ahorro',
@@ -48,7 +48,7 @@ export default function CampanaFaqPage() {
       <PageHeader
         eyebrow="Campaña · Planes de ahorro"
         title="Preguntas frecuentes"
-        description="Información práctica para ahorristas sobre contratación, entrega del auto, aumentos de precios, mora y liquidación final."
+        description={FAQ_DESCRIPTION}
         backHref="/planes-de-ahorro-son-una-trampa"
         backLabel="Volver a la campaña"
       />

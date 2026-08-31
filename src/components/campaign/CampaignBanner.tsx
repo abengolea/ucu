@@ -29,8 +29,8 @@ export function CampaignBanner() {
             Los planes de ahorro son una trampa
           </h2>
           <p className="mt-3 font-serif text-sm leading-relaxed text-white/80 md:text-base">
-            Exigimos una reforma integral del sistema de planes de ahorro automotor.
-            Recursos, acciones colectivas y asesoramiento para ahorristas de todo el país.
+            Un plan de ahorro automotor no es un crédito: la cuota se mueve con el auto y el
+            grupo. UCU exige la reforma integral del sistema.
           </p>
         </div>
         <div className="flex w-full shrink-0 flex-wrap gap-3 lg:w-auto">

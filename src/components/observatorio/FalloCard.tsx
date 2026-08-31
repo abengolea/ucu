@@ -99,9 +99,9 @@ export function ObservatorioHero() {
         <h1 className="mb-4 max-w-2xl font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
           Observatorio de fallos de consumo
         </h1>
-        <p className="mb-8 max-w-xl font-serif text-base leading-relaxed text-white/75 md:text-lg">
-          Proyecto comunitario de Usuarios y Consumidores Unidos para compilar antecedentes
-          jurisprudenciales en materia de defensa del consumidor.
+        <p className="mb-8 max-w-xl font-serif text-base leading-relaxed text-white/80 md:text-lg">
+          El Observatorio UCU es una base pública de fallos judiciales sobre defensa del
+          consumidor en Argentina, con resumen, tribunal, rubro y demandado.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link href="/observatorio/buscar" className="ucu-btn-primary">

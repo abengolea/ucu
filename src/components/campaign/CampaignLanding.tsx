@@ -71,9 +71,9 @@ export function CampaignLanding({ heroImageUrl, relatedPosts }: CampaignLandingP
           </div>
 
           <p className="ucu-animate-in ucu-animate-in-delay-2 mt-8 max-w-2xl font-serif text-base leading-relaxed text-white/85 md:text-lg">
-            Los consumidores argentinos exigimos una reforma integral del sistema de planes de
-            ahorro automotor. Recursos, acciones colectivas y asesoramiento para ahorristas de
-            todo el país.
+            Un plan de ahorro automotor no es un crédito: es un sistema de capitalización en
+            grupo donde la cuota se mueve con el precio del auto. UCU exige su reforma integral
+            y acompaña a ahorristas de todo el país.
           </p>
 
           <div className="ucu-animate-in ucu-animate-in-delay-3 mt-10 flex flex-wrap gap-4">

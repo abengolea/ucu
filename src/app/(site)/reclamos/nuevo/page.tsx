@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ReclamoForm } from '@/components/reclamos/ReclamoForm';
+import { GEO_RECLAMO } from '@/lib/geo-answers';
 import { buildPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Nuevo reclamo',
-  description:
-    'Iniciá un reclamo de consumo online con Usuarios Protegidos (UCU). Contanos qué pasó y seguí el caso hasta la conciliación.',
+  description: GEO_RECLAMO,
   path: '/reclamos/nuevo',
 });
 
@@ -18,8 +18,8 @@ export default function NuevoReclamoPage() {
           ← Volver a reclamos
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-slate-900">Realizá tu reclamo</h1>
-        <p className="mt-2 text-slate-600">
-          Completá todos los campos. Al finalizar recibirás un número para hacer seguimiento.
+        <p className="mt-2 max-w-prose text-slate-700">
+          {GEO_RECLAMO} Completá los campos; al finalizar recibís un número de seguimiento.
         </p>
       </div>
       <ReclamoForm />

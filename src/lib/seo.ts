@@ -6,7 +6,7 @@ export const SITE_NAME = 'UCU — Usuarios y Consumidores Unidos';
 export const SITE_SHORT_NAME = 'UCU';
 export const SITE_TAGLINE = 'La red de defensa del consumidor más grande del país';
 export const DEFAULT_DESCRIPTION =
-  'Defendé tus derechos como consumidor en Argentina: noticias, alertas de fraude, reclamos online, planes de ahorro y observatorio de fallos. Organización independiente de usuarios y consumidores.';
+  'UCU (Usuarios y Consumidores Unidos) es una ONG argentina de defensa del consumidor: denuncias gratuitas, estadísticas por empresa, fallos y la campaña contra los planes de ahorro.';
 
 export const SITE_KEYWORDS = [
   'defensa del consumidor',
