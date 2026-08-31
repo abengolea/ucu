@@ -433,8 +433,12 @@ function RealRateCalc() {
   );
 }
 
-export function EducationCalculators() {
-  const [tool, setTool] = useState<ToolId | null>(null);
+export function EducationCalculators({
+  initialTool = null,
+}: {
+  initialTool?: ToolId | null;
+}) {
+  const [tool, setTool] = useState<ToolId | null>(initialTool);
   const active = tool ? TOOLS.find((t) => t.id === tool) : null;
 
   return (
