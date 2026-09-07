@@ -154,7 +154,7 @@ function extractArticleChunk(html: string): string {
   const openPatterns = [
     /<(?:div|section|article)\b[^>]*class="(?:[^"]*\s)?article-content(?:\s[^"]*)?"[^>]*>/i,
     /<(?:div|section|article)\b[^>]*class="(?:[^"]*\s)?main-article(?:\s[^"]*)?"[^>]*>/i,
-    /<(?:div|section|article)\b[^>]*class="(?:[^"]*\s)?(?:entry-content|post-content|nota-body|article-body|article__body)(?:\s[^"]*)?"[^>]*>/i,
+    /<(?:div|section|article)\b[^>]*class="(?:[^"]*\s)?(?:entry-content|post-content|nota-body|nota-cuerpo|article-body|article__body)(?:\s[^"]*)?"[^>]*>/i,
     /<article\b[^>]*>/i,
     /<main\b[^>]*>/i,
   ];
@@ -179,31 +179,71 @@ function isStopHeading(text: string): boolean {
   return STOP_HEADINGS.some((stop) => normalized.includes(stop));
 }
 
-function buildContentHtml(chunk: string, sourceName: string, sourceUrl: string): {
+function looksLikeParagraph(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length > 160) return true;
+  return trimmed.length > 90 && /[.!?…]$/.test(trimmed);
+}
+
+function extractTextBlocks(chunk: string): Array<{ tag: string; html: string }> {
+  const opens: Array<{ tag: string; start: number; contentStart: number }> = [];
+  const openRe = /<(h2|h3|p)\b[^>]*>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = openRe.exec(chunk)) !== null) {
+    opens.push({
+      tag: match[1].toLowerCase(),
+      start: match.index,
+      contentStart: match.index + match[0].length,
+    });
+  }
+
+  return opens.map((current, index) => {
+    const nextStart = index + 1 < opens.length ? opens[index + 1].start : chunk.length;
+    const region = chunk.slice(current.contentStart, nextStart);
+    const close = region.search(new RegExp(`</${current.tag}>`, 'i'));
+    return {
+      tag: current.tag,
+      html: close >= 0 ? region.slice(0, close) : region,
+    };
+  });
+}
+
+function buildContentHtml(
+  chunk: string,
+  sourceName: string,
+  sourceUrl: string,
+  lead = ''
+): {
   content: string;
   warnings: string[];
 } {
   const warnings: string[] = [];
   const blocks: string[] = [];
+  const seen = new Set<string>();
+  const leadText = cleanText(lead);
+  if (leadText.length > 40) seen.add(leadText);
 
-  const tokens = [
-    ...chunk.matchAll(/<(h2|h3|p)\b[^>]*>([\s\S]*?)<\/\1>/gi),
-  ];
-
-  for (const token of tokens) {
-    const tag = token[1].toLowerCase();
-    const text = cleanText(token[2]);
+  for (const token of extractTextBlocks(chunk)) {
+    const tag = token.tag;
+    const text = cleanText(token.html);
     if (!text || text.length < 2) continue;
     if (tag !== 'p' && isStopHeading(text)) break;
     if (/^(por |fuente:|compartir|seguinos)/i.test(text) && text.length < 80) continue;
+    if (text.length > 80 && seen.has(text)) continue;
+    seen.add(text);
 
-    if (tag === 'h2') {
+    const asParagraph = tag === 'p' || looksLikeParagraph(text);
+    if (!asParagraph && tag === 'h2') {
       blocks.push(`<h2>${escapeHtml(text)}</h2>`);
-    } else if (tag === 'h3') {
+    } else if (!asParagraph && tag === 'h3') {
       blocks.push(`<h3>${escapeHtml(text)}</h3>`);
     } else {
       blocks.push(`<p>${escapeHtml(text)}</p>`);
     }
+  }
+
+  if (leadText.length > 40) {
+    blocks.unshift(`<p>${escapeHtml(leadText)}</p>`);
   }
 
   if (blocks.length < 2) {
@@ -346,7 +386,7 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
     getMeta(html, 'twitter:image:src');
 
   const chunk = extractArticleChunk(html);
-  const { content, warnings } = buildContentHtml(chunk, sourceName, url);
+  const { content, warnings } = buildContentHtml(chunk, sourceName, url, excerpt);
 
   let image: ImportedArticleImage | null = null;
   if (imageRaw) {
