@@ -1,4 +1,5 @@
 import { getAdminStorage } from '@/lib/firebase-admin';
+import { parseLinkedFalloRef } from '@/lib/linked-fallo';
 import { slugify } from '@/lib/slug';
 import type { ContentDocument, ContentTerm } from '@/types/content';
 
@@ -13,6 +14,8 @@ export type ParsedPostForm = {
   publishedAt?: string;
   originalLink?: string;
   sourceName?: string;
+  linkedFalloId?: number;
+  linkedFalloError?: string;
   removeFeaturedImage: boolean;
   image: File | null;
 };
@@ -20,6 +23,8 @@ export type ParsedPostForm = {
 export function parsePostForm(form: FormData): ParsedPostForm {
   const statusRaw = String(form.get('status') || 'publish');
   const imageEntry = form.get('featuredImage');
+  const linkedFalloRaw = String(form.get('linkedFallo') || '').trim();
+  const linkedFalloId = parseLinkedFalloRef(linkedFalloRaw);
 
   return {
     title: String(form.get('title') || '').trim(),
@@ -35,6 +40,11 @@ export function parsePostForm(form: FormData): ParsedPostForm {
     publishedAt: String(form.get('publishedAt') || '').trim() || undefined,
     originalLink: String(form.get('originalLink') || '').trim() || undefined,
     sourceName: String(form.get('sourceName') || '').trim() || undefined,
+    linkedFalloId,
+    linkedFalloError:
+      linkedFalloRaw && !linkedFalloId
+        ? 'No reconocimos el link o el número de expediente del fallo.'
+        : undefined,
     removeFeaturedImage: String(form.get('removeFeaturedImage') || '') === 'true',
     image: imageEntry instanceof File && imageEntry.size > 0 ? imageEntry : null,
   };
@@ -133,6 +143,7 @@ export function buildPostDocument(input: {
   wpId?: number;
   originalLink?: string;
   sourceName?: string;
+  linkedFalloId?: number;
 }): ContentDocument {
   return {
     wpId: input.wpId ?? 0,
@@ -152,5 +163,6 @@ export function buildPostDocument(input: {
     type: 'post',
     ...(input.originalLink ? { originalLink: input.originalLink } : {}),
     ...(input.sourceName ? { sourceName: input.sourceName } : {}),
+    ...(input.linkedFalloId ? { linkedFalloId: input.linkedFalloId } : {}),
   };
 }

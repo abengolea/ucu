@@ -49,6 +49,10 @@ export async function POST(request: NextRequest) {
 
   const parsed = parsePostForm(await request.formData());
 
+  if (parsed.linkedFalloError) {
+    return NextResponse.json({ error: parsed.linkedFalloError }, { status: 400 });
+  }
+
   if (!parsed.title || !parsed.content) {
     return NextResponse.json({ error: 'Título y contenido son obligatorios' }, { status: 400 });
   }
@@ -81,6 +85,7 @@ export async function POST(request: NextRequest) {
     },
     originalLink: parsed.originalLink,
     sourceName: parsed.sourceName,
+    linkedFalloId: parsed.linkedFalloId,
   });
 
   await db.collection('posts').doc(slug).set(post);

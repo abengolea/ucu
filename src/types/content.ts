@@ -32,6 +32,7 @@ export type ContentDocument = {
   type: 'post' | 'page';
   originalLink?: string;
   sourceName?: string;
+  linkedFalloId?: number;
 };
 
 export type CategoryDocument = {

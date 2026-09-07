@@ -52,6 +52,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   const existing = existingDoc.data() as ContentDocument;
   const parsed = parsePostForm(await request.formData());
 
+  if (parsed.linkedFalloError) {
+    return NextResponse.json({ error: parsed.linkedFalloError }, { status: 400 });
+  }
+
   if (!parsed.title || !parsed.content) {
     return NextResponse.json({ error: 'Título y contenido son obligatorios' }, { status: 400 });
   }
@@ -89,6 +93,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     wpId: existing.wpId,
     originalLink: parsed.originalLink,
     sourceName: parsed.sourceName,
+    linkedFalloId: parsed.linkedFalloId,
   });
 
   const batch = db.batch();

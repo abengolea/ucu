@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Link2, Loader2 } from 'lucide-react';
+import { linkedFalloInputValue } from '@/lib/linked-fallo';
 import { slugify } from '@/lib/slug';
 import { resolveMediaUrl } from '@/lib/media';
 import type { ContentDocument } from '@/types/content';
@@ -42,6 +43,7 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
   const [publishedAt, setPublishedAt] = useState('');
   const [originalLink, setOriginalLink] = useState('');
   const [sourceName, setSourceName] = useState('');
+  const [linkedFallo, setLinkedFallo] = useState('');
   const [importUrl, setImportUrl] = useState('');
   const [importing, setImporting] = useState(false);
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -82,6 +84,7 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
         setSelectedCategories(post.categorySlugs || []);
         setOriginalLink(post.originalLink || '');
         setSourceName(post.sourceName || '');
+        setLinkedFallo(linkedFalloInputValue(post.linkedFalloId));
         setExistingImageUrl(resolveMediaUrl(post.featuredImage?.url));
       })
       .catch(() => setError('No se pudo cargar la nota'))
@@ -192,6 +195,7 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
     form.append('categorySlugs', JSON.stringify(selectedCategories));
     form.append('originalLink', originalLink);
     form.append('sourceName', sourceName);
+    form.append('linkedFallo', linkedFallo);
     form.append('removeFeaturedImage', String(removeFeaturedImage));
     if (featuredImage) form.append('featuredImage', featuredImage);
 
@@ -474,8 +478,21 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
               value={originalLink}
               onChange={(e) => setOriginalLink(e.target.value)}
               placeholder="https://..."
+              className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+            />
+            <label className="mb-1 block text-sm font-medium text-slate-600">
+              Fallo del observatorio
+            </label>
+            <input
+              value={linkedFallo}
+              onChange={(e) => setLinkedFallo(e.target.value)}
+              placeholder="/observatorio/fallo/12345"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
             />
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">
+              Pegá el link del fallo o el número de expediente. Si lo dejás vacío, no aparece en
+              la nota.
+            </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6">

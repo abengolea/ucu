@@ -4,9 +4,11 @@ import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CommentSection } from '@/components/comments/CommentSection';
+import { LinkedFalloBox } from '@/components/posts/LinkedFalloBox';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { getPostBySlug } from '@/lib/content';
 import { decodeHtmlEntities } from '@/lib/format';
+import { getFalloById } from '@/lib/observatorio';
 import { resolveMediaUrl, rewriteContentMediaUrls } from '@/lib/media';
 import {
   articleJsonLd,
@@ -61,6 +63,10 @@ export default async function PostDetailPage({
   const title = decodeHtmlEntities(post.title);
   const imageUrl = resolveMediaUrl(post.featuredImage?.url);
   const contentHtml = rewriteContentMediaUrls(post.content);
+  const linkedFallo =
+    post.linkedFalloId && post.linkedFalloId > 0
+      ? await getFalloById(post.linkedFalloId).catch(() => null)
+      : null;
   const description = excerptToDescription(
     post.excerpt,
     `Nota de UCU sobre defensa del consumidor: ${title}`
@@ -143,6 +149,8 @@ export default async function PostDetailPage({
         ) : null}
 
         <div className="prose-ucu" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+
+        {linkedFallo ? <LinkedFalloBox fallo={linkedFallo} /> : null}
 
         {post.tags.length ? (
           <div className="mt-12 border-t border-[var(--border)] pt-8">
