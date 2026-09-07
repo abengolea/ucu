@@ -87,7 +87,9 @@ export const metadata: Metadata = {
     apple: '/brand/favicon.png',
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    google:
+      process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+      'Zl8OFL9R1PwvDUyM3qG0MyVe_KBLk40xiKj_kYllxFs',
     other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
       ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
       : undefined,

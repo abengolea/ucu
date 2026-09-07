@@ -10,6 +10,12 @@ env:
       - BUILD
       - RUNTIME
 
+  - variable: NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    value: Zl8OFL9R1PwvDUyM3qG0MyVe_KBLk40xiKj_kYllxFs
+    availability:
+      - BUILD
+      - RUNTIME
+
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: AIzaSyAoOO8GG9iA-7-UiFsSjkfHGAMFkhlE0uA
     availability:
