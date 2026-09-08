@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { UCU_CITY, UCU_EMAIL, UCU_REGION, UCU_STREET } from '@/lib/contact';
 import { decodeHtmlEntities, stripHtml } from '@/lib/format';
 import { resolveMediaUrl } from '@/lib/media';
 
@@ -161,13 +162,13 @@ export function organizationJsonLd() {
     url: getSiteUrl(),
     logo: absoluteUrl('/brand/logo-ucu.png'),
     description: DEFAULT_DESCRIPTION,
-    email: 'info@ucu.org.ar',
+    email: UCU_EMAIL,
     telephone: '+54-9-336-4457314',
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Belgrano 163 bis',
-      addressLocality: 'San Nicolás de los Arroyos',
-      addressRegion: 'Buenos Aires',
+      streetAddress: UCU_STREET,
+      addressLocality: UCU_CITY,
+      addressRegion: UCU_REGION,
       addressCountry: 'AR',
     },
     areaServed: {
@@ -176,7 +177,7 @@ export function organizationJsonLd() {
     },
     contactPoint: {
       '@type': 'ContactPoint',
-      email: 'info@ucu.org.ar',
+      email: UCU_EMAIL,
       telephone: '+54-9-336-4457314',
       contactType: 'customer support',
       availableLanguage: ['Spanish'],

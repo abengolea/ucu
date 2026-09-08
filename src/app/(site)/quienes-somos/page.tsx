@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { UCU_ADDRESS, UCU_EMAIL, UCU_PHONE } from '@/lib/contact';
 import { GEO_UCU } from '@/lib/geo-answers';
 import {
   breadcrumbJsonLd,
@@ -52,8 +53,8 @@ export default function QuienesSomosPage() {
           trampa». Asociación Civil, registro nº 21.
         </p>
         <p>
-          Sede: Belgrano 163 bis, San Nicolás de los Arroyos, Buenos Aires. Teléfono +54 9
-          0336-4457314. Correo info@ucu.org.ar. Atención a consumidores de todo el país.
+          Sede: {UCU_ADDRESS}. Teléfono {UCU_PHONE}. Correo {UCU_EMAIL}. Atención a
+          consumidores de todo el país.
         </p>
         <p>
           Si tenés un problema de consumo,{' '}

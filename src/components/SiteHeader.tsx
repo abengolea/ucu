@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { BrandStripe, Logo } from '@/components/Logo';
 import type { CategoryDocument } from '@/types/content';
+import { UCU_CITY, UCU_EMAIL, UCU_MAPS_URL, UCU_STREET } from '@/lib/contact';
 import { cn } from '@/lib/utils';
 
 const mainNav = [
@@ -145,8 +146,15 @@ export function SiteFooter() {
           </p>
           <ul className="space-y-2.5 font-display text-sm text-white/70">
             <li>
-              <a href="mailto:info@ucu.org.ar" className="transition hover:text-white">
-                info@ucu.org.ar
+              <a href={UCU_MAPS_URL} target="_blank" rel="noreferrer" className="transition hover:text-white">
+                {UCU_STREET}
+                <br />
+                {UCU_CITY}
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${UCU_EMAIL}`} className="transition hover:text-white">
+                {UCU_EMAIL}
               </a>
             </li>
             <li>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { UCU_ADDRESS } from '@/lib/contact';
 import { createReclamoFromPublicForm } from '@/lib/reclamos-store';
 import { sendEmail } from '@/lib/email';
 import type { ReclamoFormPayload } from '@/types/reclamos';
@@ -109,6 +110,6 @@ Ante cualquier consulta puede comunicarse con nosotros respondiendo este email o
 Muchas gracias por confiar en UCU.
 
 UCU — Usuarios y Consumidores Unidos
-San Nicolás de los Arroyos, Buenos Aires
+${UCU_ADDRESS}
 ${siteUrl}`;
 }

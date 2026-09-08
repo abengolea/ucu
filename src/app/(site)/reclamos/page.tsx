@@ -3,6 +3,7 @@ import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner
 import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { UCU_ADDRESS, UCU_EMAIL, UCU_PHONE } from '@/lib/contact';
 import { GEO_RECLAMO } from '@/lib/geo-answers';
 import { breadcrumbJsonLd, buildPageMetadata, webPageJsonLd } from '@/lib/seo';
 
@@ -57,10 +58,10 @@ export default function ReclamosPage() {
           Contacto
         </h3>
         <p className="mt-2 font-serif text-sm text-[var(--ink-muted)]">
-          +54 9 0336-4457314 · info@ucu.org.ar
+          {UCU_PHONE} · {UCU_EMAIL}
         </p>
         <p className="font-serif text-sm text-[var(--ink-muted)]">
-          Belgrano 163 bis, San Nicolás de los Arroyos, Buenos Aires
+          {UCU_ADDRESS}
         </p>
       </section>
     </main>

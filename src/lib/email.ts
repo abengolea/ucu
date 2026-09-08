@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { Resend } from 'resend';
+import { UCU_ADDRESS } from '@/lib/contact';
 
 function getResend(): Resend {
   const key = process.env.RESEND_API_KEY?.trim();
@@ -216,7 +217,7 @@ function bodyToHtml(text: string, subject: string): string {
           <td style="background:#edf4f8;padding:20px 34px;border:1px solid #dce3e8;border-radius:0 0 8px 8px">
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.7;color:#596773">
               <strong style="color:#30343b">Usuarios y Consumidores Unidos</strong><br>
-              San Nicolás de los Arroyos, Buenos Aires<br>
+              ${UCU_ADDRESS}<br>
               <a href="https://ucu.org.ar" style="color:#0066b3;font-weight:700;text-decoration:none">ucu.org.ar</a>
             </p>
           </td>
