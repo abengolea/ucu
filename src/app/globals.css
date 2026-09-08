@@ -69,7 +69,33 @@ body {
 .prose-ucu h3 { @apply text-lg; }
 
 .prose-ucu p {
-  @apply mb-5 font-serif leading-[1.75] text-[var(--ink-muted)];
+  @apply mb-5 font-serif leading-[1.75] text-[var(--ink)];
+  text-wrap: pretty;
+}
+
+.prose-ucu p[style*='justify'],
+.prose-ucu [style*='text-align: justify'] {
+  hyphens: auto;
+}
+
+.prose-ucu .lh-1_4 { line-height: 1.4; }
+.prose-ucu .lh-1_6 { line-height: 1.6; }
+.prose-ucu .lh-1_75 { line-height: 1.75; }
+.prose-ucu .lh-2 { line-height: 2; }
+.prose-ucu .lh-2_4 { line-height: 2.4; }
+
+.prose-ucu strong,
+.prose-ucu b {
+  @apply font-bold text-[var(--ink)];
+}
+
+.prose-ucu em,
+.prose-ucu i {
+  font-style: italic;
+}
+
+.prose-ucu u {
+  text-underline-offset: 0.18em;
 }
 
 .prose-ucu a {
@@ -94,6 +120,14 @@ body {
 
 .prose-ucu iframe {
   @apply my-8 aspect-video w-full rounded-lg;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #94a3b8;
 }
 
 @layer components {

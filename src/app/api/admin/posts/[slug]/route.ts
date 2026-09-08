@@ -10,6 +10,7 @@ import {
   uploadFeaturedImage,
   upsertTags,
 } from '@/lib/admin-posts-server';
+import { stripHtml } from '@/lib/format';
 import type { ContentDocument } from '@/types/content';
 
 type RouteContext = { params: Promise<{ slug: string }> };
@@ -56,7 +57,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: parsed.linkedFalloError }, { status: 400 });
   }
 
-  if (!parsed.title || !parsed.content) {
+  if (!parsed.title || !stripHtml(parsed.content)) {
     return NextResponse.json({ error: 'Título y contenido son obligatorios' }, { status: 400 });
   }
 

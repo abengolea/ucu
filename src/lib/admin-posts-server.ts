@@ -1,4 +1,5 @@
 import { getAdminStorage } from '@/lib/firebase-admin';
+import { ensureNoteHtml } from '@/lib/note-html';
 import { parseLinkedFalloRef } from '@/lib/linked-fallo';
 import { slugify } from '@/lib/slug';
 import type { ContentDocument, ContentTerm } from '@/types/content';
@@ -28,7 +29,7 @@ export function parsePostForm(form: FormData): ParsedPostForm {
 
   return {
     title: String(form.get('title') || '').trim(),
-    content: String(form.get('content') || '').trim(),
+    content: ensureNoteHtml(String(form.get('content') || '')),
     excerpt: String(form.get('excerpt') || '').trim(),
     status: statusRaw === 'draft' ? 'draft' : 'publish',
     requestedSlug: String(form.get('slug') || '').trim(),

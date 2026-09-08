@@ -6,6 +6,8 @@ import { Link2, Loader2 } from 'lucide-react';
 import { linkedFalloInputValue } from '@/lib/linked-fallo';
 import { slugify } from '@/lib/slug';
 import { resolveMediaUrl } from '@/lib/media';
+import { RichTextEditor } from '@/components/admin/RichTextEditor';
+import { stripHtml } from '@/lib/format';
 import type { ContentDocument } from '@/types/content';
 
 type Category = {
@@ -183,6 +185,12 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
     setLoading(true);
     setError('');
     setSuccess('');
+
+    if (!stripHtml(content)) {
+      setError('Escribí el contenido de la nota');
+      setLoading(false);
+      return;
+    }
 
     const form = new FormData();
     form.append('title', title);
@@ -409,14 +417,10 @@ export function PostEditor({ mode, initialSlug }: PostEditorProps) {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Contenido *</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={18}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-[#1a5fb4]"
-              placeholder="HTML de WordPress o texto plano"
-              required
-            />
+            <p className="mb-2 text-xs leading-relaxed text-slate-500">
+              Pegá texto o HTML: se respetan párrafos, negritas y el formato que elijas.
+            </p>
+            <RichTextEditor value={content} onChange={setContent} />
           </div>
         </div>
 

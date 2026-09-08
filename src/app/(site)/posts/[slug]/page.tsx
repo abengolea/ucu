@@ -10,6 +10,7 @@ import { getPostBySlug } from '@/lib/content';
 import { decodeHtmlEntities } from '@/lib/format';
 import { getFalloById } from '@/lib/observatorio';
 import { resolveMediaUrl, rewriteContentMediaUrls } from '@/lib/media';
+import { ensureNoteHtml } from '@/lib/note-html';
 import {
   articleJsonLd,
   breadcrumbJsonLd,
@@ -62,7 +63,7 @@ export default async function PostDetailPage({
   if (!post) notFound();
   const title = decodeHtmlEntities(post.title);
   const imageUrl = resolveMediaUrl(post.featuredImage?.url);
-  const contentHtml = rewriteContentMediaUrls(post.content);
+  const contentHtml = rewriteContentMediaUrls(ensureNoteHtml(post.content));
   const linkedFallo =
     post.linkedFalloId && post.linkedFalloId > 0
       ? await getFalloById(post.linkedFalloId).catch(() => null)
