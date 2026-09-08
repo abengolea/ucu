@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import logoColor from '../../public/brand/logo-ucu.png';
+import logoWhite from '../../public/brand/logo-ucu-white.png';
 
 type LogoProps = {
   variant?: 'color' | 'white';
@@ -17,14 +19,13 @@ export function Logo({
   linked = true,
   priority = false,
 }: LogoProps) {
-  const src = variant === 'white' ? '/brand/logo-ucu-white.png' : '/brand/logo-ucu.png';
+  const src = variant === 'white' ? logoWhite : logoColor;
   const img = (
     <Image
       src={src}
       alt="Usuarios y Consumidores Unidos"
-      width={variant === 'white' ? 220 : 236}
-      height={variant === 'white' ? 105 : 111}
       priority={priority}
+      unoptimized
       className={cn('h-auto w-[170px] sm:w-[200px]', className)}
     />
   );

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // pdfkit lee sus métricas .afm desde disco en runtime; el tracing no las detecta.
   outputFileTracingIncludes: {
     '/api/**': ['./node_modules/pdfkit/js/data/**'],
+    '/*': ['./public/brand/**'],
   },
   typescript: {
     ignoreBuildErrors: true,

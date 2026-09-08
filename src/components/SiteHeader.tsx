@@ -130,7 +130,6 @@ export function SiteFooter() {
               { href: '/educacion-financiera', label: 'Educación financiera' },
               { href: '/preguntas-frecuentes', label: 'Preguntas frecuentes' },
               { href: '/quienes-somos', label: 'Quiénes somos' },
-              { href: '/feed.xml', label: 'RSS' },
             ].map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="transition hover:text-white">
