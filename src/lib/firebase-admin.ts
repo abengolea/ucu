@@ -48,10 +48,15 @@ function createAdminApp(): App | null {
 
   const serviceAccount = loadServiceAccount();
   if (serviceAccount) {
-    return initializeApp({
-      credential: cert(serviceAccount),
-      storageBucket,
-    });
+    try {
+      return initializeApp({
+        credential: cert(serviceAccount),
+        storageBucket,
+      });
+    } catch (error) {
+      console.error('[firebase-admin] Invalid service account credentials', error);
+      return null;
+    }
   }
 
   if (!projectId) {
