@@ -13,7 +13,6 @@ import type {
   ReclamoDelegado,
   ReclamoEstado,
   ReclamoGrupoEstado,
-  ReclamoComunicacionSugerencia,
   StoredReclamoDocument,
 } from '@/types/reclamos';
 import {
@@ -68,10 +67,6 @@ export default function AdminReclamoDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState(false);
-  const [sugerencias, setSugerencias] = useState<ReclamoComunicacionSugerencia[]>([]);
-  const [loadingSugerencias, setLoadingSugerencias] = useState(false);
-  const [sugerenciasError, setSugerenciasError] = useState<string | null>(null);
-  const [casosSimilaresUsados, setCasosSimilaresUsados] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,31 +98,6 @@ export default function AdminReclamoDetailPage() {
   useEffect(() => {
     setListHref(getAdminReclamosReturnHref());
   }, []);
-
-  const loadSugerencias = useCallback(async () => {
-    if (!canWrite) return;
-    setLoadingSugerencias(true);
-    setSugerenciasError(null);
-    try {
-      const res = await fetch(`/api/admin/reclamos/${reclamoId}/sugerencias`, {
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'No se pudieron cargar sugerencias');
-      setSugerencias(data.sugerencias || []);
-    } catch (err) {
-      setSugerencias([]);
-      setSugerenciasError(err instanceof Error ? err.message : 'Error al cargar sugerencias');
-    } finally {
-      setLoadingSugerencias(false);
-    }
-  }, [canWrite, reclamoId]);
-
-  useEffect(() => {
-    if (canWrite) {
-      void loadSugerencias();
-    }
-  }, [canWrite, loadSugerencias]);
 
   const estadosPorGrupo = useMemo(() => {
     const map = new Map<number, ReclamoEstado[]>();
@@ -258,7 +228,6 @@ export default function AdminReclamoDetailPage() {
       if (!res.ok) throw new Error(data.error || 'Error al generar borrador');
       setEmailSubject(data.subject ?? '');
       setEmailBody(data.body ?? '');
-      setCasosSimilaresUsados(Number(data.casosSimilaresUsados) || 0);
       setEmailViaIA(true);
     } catch (err) {
       setEmailError(err instanceof Error ? err.message : 'Error inesperado');
@@ -287,9 +256,7 @@ export default function AdminReclamoDetailPage() {
       setEmailBody('');
       setIntencion('');
       setEmailViaIA(false);
-      setCasosSimilaresUsados(0);
       await load();
-      await loadSugerencias();
     } catch (err) {
       setEmailError(err instanceof Error ? err.message : 'Error inesperado');
     } finally {
@@ -519,19 +486,12 @@ export default function AdminReclamoDetailPage() {
               onPlantilla={setPlantilla}
               intencion={intencion}
               onIntencion={setIntencion}
-              sugerencias={sugerencias}
-              loadingSugerencias={loadingSugerencias}
-              sugerenciasError={sugerenciasError}
-              casosSimilaresUsados={casosSimilaresUsados}
               subject={emailSubject}
               onSubject={setEmailSubject}
               body={emailBody}
               onBody={setEmailBody}
               viaIA={emailViaIA}
-              onClearIA={() => {
-                setEmailViaIA(false);
-                setCasosSimilaresUsados(0);
-              }}
+              onClearIA={() => setEmailViaIA(false)}
               generating={generatingDraft}
               sending={sendingEmail}
               error={emailError}
@@ -685,10 +645,6 @@ type ComunicacionesPanelProps = {
   onPlantilla: (v: string) => void;
   intencion: string;
   onIntencion: (v: string) => void;
-  sugerencias: ReclamoComunicacionSugerencia[];
-  loadingSugerencias: boolean;
-  sugerenciasError: string | null;
-  casosSimilaresUsados: number;
   subject: string;
   onSubject: (v: string) => void;
   body: string;
@@ -711,10 +667,6 @@ function ComunicacionesPanel({
   onPlantilla,
   intencion,
   onIntencion,
-  sugerencias,
-  loadingSugerencias,
-  sugerenciasError,
-  casosSimilaresUsados,
   subject,
   onSubject,
   body,
@@ -768,7 +720,7 @@ function ComunicacionesPanel({
             className="field-input text-sm"
           />
           <p className="mt-1 text-[11px] text-slate-500">
-            Gemini redactará el mensaje formal a partir de esta intención y de casos similares.
+            Gemini redactará el mensaje formal a partir de esta intención.
           </p>
         </div>
 
@@ -795,41 +747,19 @@ function ComunicacionesPanel({
           </div>
         </div>
 
-        <div className="rounded-xl border border-violet-200 bg-violet-50/70 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-800">
-              <Sparkles className="h-3.5 w-3.5" />
-              Modelos de casos similares
-            </p>
-            {loadingSugerencias ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
-            ) : null}
-          </div>
-
-          {sugerenciasError ? (
-            <p className="text-xs text-red-700">{sugerenciasError}</p>
-          ) : loadingSugerencias ? (
-            <p className="text-xs text-violet-700">Buscando contestaciones parecidas…</p>
-          ) : sugerencias.length === 0 ? (
-            <p className="text-xs text-violet-700">
-              Todavía no hay emails enviados en casos parecidos a este. Igual podés redactar con Gemini usando tu intención.
-            </p>
+        <button
+          type="button"
+          onClick={() => { onClearSuccess(); onGenerateDraft(); }}
+          disabled={generating}
+          className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+        >
+          {generating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <div className="space-y-2">
-              {sugerencias.map((item) => (
-                <SugerenciaComunicacionCard
-                  key={`${item.reclamoId}-${item.comunicacion.sentAt}`}
-                  item={item}
-                  onUsar={() => {
-                    onSubject(item.comunicacion.subject);
-                    onBody(item.comunicacion.body);
-                    onClearIA();
-                  }}
-                />
-              ))}
-            </div>
+            <Sparkles className="h-3.5 w-3.5" />
           )}
-        </div>
+          {generating ? 'Generando…' : 'Redactar con Gemini'}
+        </button>
 
         <form onSubmit={onSend} className="space-y-3">
           <div>
@@ -851,7 +781,6 @@ function ComunicacionesPanel({
                 <span className="flex items-center gap-1 text-[10px] font-semibold text-[#1a5fb4]">
                   <Sparkles className="h-3 w-3" />
                   Generado con Gemini
-                  {casosSimilaresUsados > 0 ? ` · ${casosSimilaresUsados} caso(s) similar(es)` : ''}
                 </span>
               )}
             </label>
@@ -876,34 +805,18 @@ function ComunicacionesPanel({
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => { onClearSuccess(); onGenerateDraft(); }}
-              disabled={generating}
-              className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-            >
-              {generating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              {generating ? 'Generando…' : 'Redactar con Gemini'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={sending || !subject.trim() || !body.trim()}
-              className="flex items-center gap-2 rounded-lg bg-[#1a5fb4] px-4 py-2 text-xs font-semibold text-white hover:bg-[#004a80] disabled:opacity-60"
-            >
-              {sending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              {sending ? 'Enviando…' : 'Enviar email'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={sending || !subject.trim() || !body.trim()}
+            className="flex items-center gap-2 rounded-lg bg-[#1a5fb4] px-4 py-2 text-xs font-semibold text-white hover:bg-[#004a80] disabled:opacity-60"
+          >
+            {sending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            {sending ? 'Enviando…' : 'Enviar email'}
+          </button>
         </form>
 
         {/* Historial de comunicaciones */}
@@ -921,60 +834,6 @@ function ComunicacionesPanel({
         )}
       </div>
     </div>
-  );
-}
-
-function SugerenciaComunicacionCard({
-  item,
-  onUsar,
-}: {
-  item: ReclamoComunicacionSugerencia;
-  onUsar: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <article className="rounded-lg border border-violet-200 bg-white">
-      <div className="flex items-start justify-between gap-3 px-3 py-2.5">
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          className="min-w-0 flex-1 text-left"
-        >
-          <p className="text-xs font-semibold text-slate-800">
-            Reclamo #{item.reclamoId} · {item.empresas}
-          </p>
-          <p className="mt-0.5 truncate text-[11px] text-slate-500">{item.comunicacion.subject}</p>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {item.motivos.map((motivo) => (
-              <span
-                key={motivo}
-                className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-800"
-              >
-                {motivo}
-              </span>
-            ))}
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={onUsar}
-          className="shrink-0 rounded-lg border border-violet-300 px-2.5 py-1.5 text-[11px] font-semibold text-violet-800 hover:bg-violet-100"
-        >
-          Usar modelo
-        </button>
-      </div>
-      {open ? (
-        <div className="border-t border-violet-100 px-3 py-2.5">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-            {item.estadoDescripcion} · {format(new Date(item.comunicacion.sentAt), "d MMM yyyy", { locale: es })}
-          </p>
-          <p className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-600">
-            {item.comunicacion.body}
-          </p>
-        </div>
-      ) : null}
-    </article>
   );
 }
 
