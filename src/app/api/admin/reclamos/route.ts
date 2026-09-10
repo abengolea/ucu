@@ -16,6 +16,18 @@ const BANDEJAS = new Set<ReclamoAdminBandeja | 'todos'>([
   'todos',
 ]);
 
+function normalizeOtrasEmpresas(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  if (Array.isArray(value)) {
+    const trimmed = value.map((item) => String(item).trim()).filter(Boolean).join(', ');
+    return trimmed || null;
+  }
+  return null;
+}
+
 function mapReclamo(item: Awaited<ReturnType<typeof listAdminReclamos>>[number]) {
   const empresas = Array.isArray(item.empresas) ? item.empresas : [];
   const denunciante = item.denunciante;
@@ -43,7 +55,7 @@ function mapReclamo(item: Awaited<ReturnType<typeof listAdminReclamos>>[number])
     updatedAt: item.updatedAt,
     empresaIds: item.empresaIds ?? empresas.map((e) => e.id),
     empresas,
-    otrasEmpresas: item.otrasEmpresas ?? null,
+    otrasEmpresas: normalizeOtrasEmpresas(item.otrasEmpresas),
   };
 }
 

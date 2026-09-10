@@ -52,9 +52,21 @@ function formatLocalidad(reclamo: AdminReclamoListItem): string {
   return ciudad || provincia || '—';
 }
 
+function formatOtrasEmpresas(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  if (Array.isArray(value)) {
+    const trimmed = value.map((item) => String(item).trim()).filter(Boolean).join(', ');
+    return trimmed || null;
+  }
+  return null;
+}
+
 function formatEmpresas(reclamo: AdminReclamoListItem): string {
   const nombres = (reclamo.empresas ?? []).map((e) => e.nombre?.trim() ?? '').filter(Boolean);
-  const otras = reclamo.otrasEmpresas?.trim();
+  const otras = formatOtrasEmpresas(reclamo.otrasEmpresas);
   if (otras) nombres.push(otras);
   return nombres.length ? nombres.join(' · ') : '—';
 }
