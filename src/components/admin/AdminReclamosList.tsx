@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Archive, Loader2, X } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
@@ -53,7 +53,7 @@ function formatLocalidad(reclamo: AdminReclamoListItem): string {
 }
 
 function formatEmpresas(reclamo: AdminReclamoListItem): string {
-  const nombres = reclamo.empresas.map((e) => e.nombre.trim()).filter(Boolean);
+  const nombres = (reclamo.empresas ?? []).map((e) => e.nombre?.trim() ?? '').filter(Boolean);
   const otras = reclamo.otrasEmpresas?.trim();
   if (otras) nombres.push(otras);
   return nombres.length ? nombres.join(' · ') : '—';
@@ -105,6 +105,7 @@ export function AdminReclamosList({
 }: AdminReclamosListProps) {
   const user = useAdminUser();
   const pathname = usePathname();
+  const router = useRouter();
   const canWriteReclamos = user.permissions.includes('reclamos:write');
   const writeScopeAll = user.reclamosWriteScope === 'all';
   const defaults = defaultAdminReclamosFilters(mode);
@@ -160,12 +161,26 @@ export function AdminReclamosList({
 
   useEffect(() => {
     if (!filtersReady) return;
-    persistAdminReclamosFilters(
+    const href = persistAdminReclamosFilters(
       mode,
       { bandeja, query, responsableInput, provinciaId, ciudadId },
       pathname
     );
-  }, [filtersReady, mode, pathname, bandeja, query, responsableInput, provinciaId, ciudadId]);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current !== href) {
+      router.replace(href, { scroll: false });
+    }
+  }, [
+    filtersReady,
+    mode,
+    pathname,
+    router,
+    bandeja,
+    query,
+    responsableInput,
+    provinciaId,
+    ciudadId,
+  ]);
 
   useEffect(() => {
     if (mode !== 'all') return;

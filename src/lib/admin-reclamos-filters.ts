@@ -104,12 +104,23 @@ export function readAdminReclamosFilters(mode: AdminReclamosListMode): AdminRecl
   }
 }
 
+export function buildAdminReclamosHref(
+  mode: AdminReclamosListMode,
+  filters: AdminReclamosFilters,
+  pathname: string
+): string {
+  const query = adminReclamosFiltersToSearch(filters, mode);
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 export function persistAdminReclamosFilters(
   mode: AdminReclamosListMode,
   filters: AdminReclamosFilters,
   pathname: string
-): void {
-  if (typeof window === 'undefined') return;
+): string {
+  const href = buildAdminReclamosHref(mode, filters, pathname);
+
+  if (typeof window === 'undefined') return href;
 
   try {
     const defaults = defaultAdminReclamosFilters(mode);
@@ -124,18 +135,13 @@ export function persistAdminReclamosFilters(
     // sessionStorage puede fallar en modo privado
   }
 
-  const query = adminReclamosFiltersToSearch(filters, mode);
-  const href = query ? `${pathname}?${query}` : pathname;
-  const current = `${window.location.pathname}${window.location.search}`;
-  if (current !== href && window.location.pathname === pathname) {
-    window.history.replaceState(window.history.state, '', href);
-  }
-
   try {
     sessionStorage.setItem(RETURN_HREF_KEY, href);
   } catch {
     // ignore
   }
+
+  return href;
 }
 
 export function getAdminReclamosReturnHref(): string {

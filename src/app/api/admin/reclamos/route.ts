@@ -17,16 +17,22 @@ const BANDEJAS = new Set<ReclamoAdminBandeja | 'todos'>([
 ]);
 
 function mapReclamo(item: Awaited<ReturnType<typeof listAdminReclamos>>[number]) {
+  const empresas = Array.isArray(item.empresas) ? item.empresas : [];
+  const denunciante = item.denunciante;
+  const nombre = denunciante
+    ? `${denunciante.nombre ?? ''} ${denunciante.apellido ?? ''}`.trim()
+    : '';
+
   return {
     id: item.id,
-    nombre: `${item.denunciante.nombre} ${item.denunciante.apellido}`.trim(),
-    email: item.denunciante.email ?? null,
-    provinciaId: item.denunciante.provinciaId ?? null,
-    ciudadId: item.denunciante.ciudadId ?? null,
-    ciudadNombre: item.denunciante.ciudadNombre ?? null,
-    provinciaNombre: item.denunciante.provinciaNombre ?? null,
-    resumen: item.resumen,
-    hecho: item.hecho,
+    nombre: nombre || `Reclamo #${item.id}`,
+    email: denunciante?.email ?? null,
+    provinciaId: denunciante?.provinciaId ?? null,
+    ciudadId: denunciante?.ciudadId ?? null,
+    ciudadNombre: denunciante?.ciudadNombre ?? null,
+    provinciaNombre: denunciante?.provinciaNombre ?? null,
+    resumen: item.resumen ?? '',
+    hecho: item.hecho ?? '',
     estadoDescripcion: item.estadoDescripcion,
     idGrupoEstado: item.idGrupoEstado,
     adminBandeja: item.adminBandeja,
@@ -35,8 +41,8 @@ function mapReclamo(item: Awaited<ReturnType<typeof listAdminReclamos>>[number])
     causasCount: item.causas?.length ?? 0,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
-    empresaIds: item.empresaIds ?? item.empresas.map((e) => e.id),
-    empresas: item.empresas,
+    empresaIds: item.empresaIds ?? empresas.map((e) => e.id),
+    empresas,
     otrasEmpresas: item.otrasEmpresas ?? null,
   };
 }
