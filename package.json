@@ -49,6 +49,10 @@
     "import:drive-reclamos": "node scripts/import-reclamos-from-drive.mjs",
     "import:drive-reclamos:dry": "node scripts/import-reclamos-from-drive.mjs --dry-run",
     "import:drive-reclamos:sample": "node scripts/import-reclamos-from-drive.mjs --dry-run --limit=5",
+    "drive:watch:bootstrap": "node scripts/poll-drive-changes.mjs --bootstrap",
+    "drive:watch:bootstrap:sample": "node scripts/poll-drive-changes.mjs --bootstrap --limit=10",
+    "drive:watch": "node scripts/poll-drive-changes.mjs",
+    "drive:watch:dry": "node scripts/poll-drive-changes.mjs --dry-run",
     "test:mp-pago-10": "node scripts/test-mp-pago-10.mjs",
     "preview:informe-pdf": "npx tsx scripts/preview-informe-pdf.ts"
   },
