@@ -101,7 +101,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          'prose-ucu min-h-[22rem] max-w-none px-4 py-3 text-[15px] outline-none [&_.lh-1_4]:leading-[1.4] [&_.lh-1_6]:leading-[1.6] [&_.lh-1_75]:leading-[1.75] [&_.lh-2]:leading-[2] [&_.lh-2_4]:leading-[2.4]',
+          'prose-ucu min-h-[22rem] max-w-none px-4 py-3 text-[15px] outline-none',
       },
     },
     onUpdate: ({ editor: instance }) => {
