@@ -108,6 +108,12 @@ function estadoBadge(reclamo: AdminReclamoListItem): { label: string; className:
   };
 }
 
+function actionLabel(reclamo: AdminReclamoListItem, mode: AdminReclamosListProps['mode']): string {
+  if (reclamo.adminBandeja === 'espera_aceptacion') return 'Revisar';
+  if (mode === 'assigned' || reclamo.adminBandeja !== 'recibidos') return 'Gestionar';
+  return 'Tomar';
+}
+
 export function AdminReclamosList({
   mode,
   title,
@@ -520,43 +526,54 @@ export function AdminReclamosList({
           ) : null}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[1100px] text-left text-sm">
+        <div className="max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+          <table className="w-full min-w-[980px] table-fixed border-separate border-spacing-0 text-left text-sm">
             <colgroup>
               <col className="w-[72px]" />
-              <col className="w-[160px]" />
-              <col className="w-[140px]" />
-              <col className="w-[220px]" />
+              <col className="w-[148px]" />
+              <col className="w-[132px]" />
+              <col className="w-[168px]" />
               <col />
-              <col className="w-[110px]" />
+              <col className="w-[124px]" />
               {mode === 'all' ? <col className="w-[120px]" /> : null}
-              <col className="w-[96px]" />
-              <col className="w-[130px]" />
+              <col className="w-[88px]" />
+              <col className="w-[148px]" />
             </colgroup>
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <thead className="bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-semibold">Nº</th>
-                <th className="px-4 py-3 font-semibold">Denunciante</th>
-                <th className="px-4 py-3 font-semibold">Localidad</th>
-                <th className="px-4 py-3 font-semibold">Empresa</th>
-                <th className="px-4 py-3 font-semibold">Hechos</th>
-                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Nº</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Denunciante</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Localidad</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Empresa</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Hechos</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Estado</th>
                 {mode === 'all' ? (
-                  <th className="px-4 py-3 font-semibold">Responsable</th>
+                  <th className="border-b border-slate-200 px-3 py-3 font-semibold">Responsable</th>
                 ) : null}
-                <th className="px-4 py-3 font-semibold">Fecha</th>
-                <th className="px-4 py-3 font-semibold">Acciones</th>
+                <th className="border-b border-slate-200 px-3 py-3 font-semibold">Fecha</th>
+                <th className="sticky right-0 z-20 border-b border-slate-200 bg-slate-50 px-3 py-3 font-semibold shadow-[-12px_0_16px_-10px_rgba(15,23,42,0.18)]">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((reclamo) => (
-                <tr key={reclamo.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80">
-                  <td className="px-4 py-3 align-top font-medium text-slate-900">{reclamo.id}</td>
-                  <td className="px-4 py-3 align-top text-slate-700">{reclamo.nombre}</td>
-                  <td className="px-4 py-3 align-top text-slate-600">
-                    <span className="whitespace-normal break-words">{formatLocalidad(reclamo)}</span>
+                <tr key={reclamo.id} className="group hover:bg-slate-50/80">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top font-medium text-slate-900">
+                    <Link
+                      href={`/admin/reclamos/${reclamo.id}`}
+                      className="hover:text-[#1a5fb4] hover:underline"
+                    >
+                      {reclamo.id}
+                    </Link>
                   </td>
-                  <td className="px-4 py-3 align-top text-slate-700">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top text-slate-700">
+                    <span className="line-clamp-2 break-words">{reclamo.nombre}</span>
+                  </td>
+                  <td className="border-b border-slate-100 px-3 py-3 align-top text-slate-600">
+                    <span className="line-clamp-2 break-words">{formatLocalidad(reclamo)}</span>
+                  </td>
+                  <td className="border-b border-slate-100 px-3 py-3 align-top text-slate-700">
                     {editingEmpresasId === reclamo.id ? (
                       <ReclamoEmpresasQuickEdit
                         reclamo={reclamo}
@@ -568,7 +585,7 @@ export function AdminReclamosList({
                       />
                     ) : (
                       <>
-                        <span className="whitespace-normal break-words leading-snug">
+                        <span className="line-clamp-3 break-words leading-snug">
                           {formatEmpresas(reclamo)}
                         </span>
                         {canEditEmpresas(reclamo) ? (
@@ -581,18 +598,23 @@ export function AdminReclamosList({
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top text-slate-700">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top text-slate-700">
                     {reclamo.resumen ? (
-                      <p className="mb-1 text-xs font-semibold text-slate-500">{reclamo.resumen}</p>
+                      <p className="mb-1 truncate text-xs font-semibold text-slate-500" title={reclamo.resumen}>
+                        {reclamo.resumen}
+                      </p>
                     ) : null}
-                    <p className="whitespace-pre-wrap leading-relaxed">{reclamo.hecho || '—'}</p>
+                    <p className="line-clamp-3 leading-relaxed" title={reclamo.hecho || undefined}>
+                      {reclamo.hecho || '—'}
+                    </p>
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top">
                     {(() => {
                       const badge = estadoBadge(reclamo);
                       return (
                         <span
-                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+                          className={`inline-block max-w-full truncate rounded-full px-2 py-0.5 text-xs font-semibold ${badge.className}`}
+                          title={badge.label}
                         >
                           {badge.label}
                         </span>
@@ -600,32 +622,30 @@ export function AdminReclamosList({
                     })()}
                   </td>
                   {mode === 'all' ? (
-                    <td className="px-4 py-3 align-top text-slate-600">
+                    <td className="border-b border-slate-100 px-3 py-3 align-top text-slate-600">
                       {reclamo.asignacionPendiente ? (
-                        <span className="text-orange-800">
+                        <span className="line-clamp-2 text-orange-800" title={`Pendiente: ${reclamo.asignacionPendiente.name}`}>
                           Pendiente: {reclamo.asignacionPendiente.name}
                         </span>
                       ) : reclamo.responsable?.name ? (
-                        reclamo.responsable.name
+                        <span className="line-clamp-2" title={reclamo.responsable.name}>
+                          {reclamo.responsable.name}
+                        </span>
                       ) : (
                         <span className="text-amber-700">Sin asignar</span>
                       )}
                     </td>
                   ) : null}
-                  <td className="px-4 py-3 align-top text-slate-500">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top whitespace-nowrap text-slate-500">
                     {new Date(reclamo.createdAt).toLocaleDateString('es-AR')}
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex flex-col gap-1.5">
+                  <td className="sticky right-0 z-10 border-b border-slate-100 bg-white px-3 py-3 align-top shadow-[-12px_0_16px_-10px_rgba(15,23,42,0.18)] group-hover:bg-slate-50">
+                    <div className="flex flex-col items-stretch gap-1.5">
                       <Link
                         href={`/admin/reclamos/${reclamo.id}`}
-                        className="font-semibold text-[#1a5fb4] hover:underline"
+                        className="inline-flex items-center justify-center rounded-md bg-[#1a5fb4] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#154a8c]"
                       >
-                        {reclamo.adminBandeja === 'espera_aceptacion'
-                          ? 'Revisar'
-                          : mode === 'assigned' || reclamo.adminBandeja !== 'recibidos'
-                            ? 'Gestionar'
-                            : 'Tomar'}
+                        {actionLabel(reclamo, mode)}
                       </Link>
                       {canArchiveReclamo(reclamo) ? (
                         <>

@@ -20,7 +20,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       <AdminSidebar />
       <div
         className={cn(
-          'min-h-screen pt-14 transition-[padding] duration-200 lg:pt-0',
+          'min-h-screen min-w-0 pt-14 transition-[padding] duration-200 lg:pt-0',
           collapsed ? 'lg:pl-[68px]' : 'lg:pl-64'
         )}
       >
@@ -30,7 +30,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </header>
         <main
           className={cn(
-            'mx-auto px-4 py-6 lg:px-8 lg:pb-8 lg:pt-4',
+            'mx-auto min-w-0 px-4 py-6 lg:px-8 lg:pb-8 lg:pt-4',
             wideContent ? 'max-w-[1600px]' : 'max-w-6xl'
           )}
         >
