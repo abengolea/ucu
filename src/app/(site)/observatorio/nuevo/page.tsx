@@ -6,7 +6,7 @@ import { buildPageMetadata } from '@/lib/seo';
 export const metadata: Metadata = buildPageMetadata({
   title: 'Cargar fallo',
   description:
-    'Colaborá con el Observatorio UCU publicando un fallo jurisprudencial en defensa del consumidor. Sin registro previo.',
+    'Colaborá con el Observatorio UCU publicando un fallo jurisprudencial en defensa del consumidor.',
   path: '/observatorio/nuevo',
 });
 
@@ -28,8 +28,8 @@ export default function ObservatorioNuevoFalloPage() {
           Cargar un nuevo fallo
         </h1>
         <p className="mt-3 max-w-prose font-serif text-base leading-relaxed text-[var(--ink-muted)]">
-          El observatorio es un proyecto comunitario. Podés sumar antecedentes jurisprudenciales sin
-          registrarte ni iniciar sesión. Completá los datos del fallo y adjuntá el PDF de la sentencia.
+          El observatorio es un proyecto comunitario. Completá los datos del fallo y adjuntá el PDF
+          de la sentencia.
         </p>
       </div>
 

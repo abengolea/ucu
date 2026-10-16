@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import {
   formatPrecioArs,
   getInformePrecioCents,
@@ -23,6 +24,9 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const { id: rawId } = await context.params;
   const empresaId = Number(rawId);
   if (!Number.isFinite(empresaId) || empresaId <= 0) {
@@ -67,7 +71,7 @@ export async function GET(
       return NextResponse.json({ error: 'Empresa no encontrada' }, { status: 404 });
     }
 
-    const precioCents = getInformePrecioCents();
+    const precioCents = await getInformePrecioCents();
     const puedeInforme = data.stats.total >= INFORME_MIN_CASOS;
 
     const res = NextResponse.json(

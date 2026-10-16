@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import { validateFalloFormPayload } from '@/lib/fallo-form-payload';
 import { uploadFalloPdfToStorage } from '@/lib/fallo-files-server';
 import { assertPdfNotDuplicate } from '@/lib/fallo-pdf-duplicate';
@@ -13,6 +14,9 @@ import {
 } from '@/lib/observatorio-store';
 
 export async function POST(request: NextRequest) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const { payload, pdfFile } = await readFalloFormBody(request);
   if (!payload) {
     return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });

@@ -7,7 +7,10 @@ import { Menu, X } from 'lucide-react';
 import { BrandStripe, Logo } from '@/components/Logo';
 import type { CategoryDocument } from '@/types/content';
 import { UCU_CITY, UCU_EMAIL, UCU_MAPS_URL, UCU_STREET } from '@/lib/contact';
+import { SiteSocialLinks } from '@/components/SiteSocialLinks';
+import { MEMBER_LOGIN_PATH } from '@/lib/member-paths';
 import { cn } from '@/lib/utils';
+import type { MemberViewer } from '@/types/members';
 
 const mainNav = [
   { href: '/', label: 'Inicio' },
@@ -41,7 +44,7 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ viewer = null }: { viewer?: Pick<MemberViewer, 'name' | 'email' | 'source'> | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -58,6 +61,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <AccountControls viewer={viewer} compact={false} />
             <a
               href="mailto:info@ucu.org.ar"
               className="hidden rounded-md bg-ucu-blue px-4 py-2 font-display text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#004a80] lg:inline-flex"
@@ -81,7 +85,7 @@ export function SiteHeader() {
           id="mobile-nav"
           className={cn(
             'overflow-hidden border-t border-[var(--border)] bg-[var(--surface-raised)] transition-[max-height] duration-300 ease-out md:hidden',
-            open ? 'max-h-[28rem]' : 'max-h-0',
+            open ? 'max-h-[36rem]' : 'max-h-0',
           )}
           aria-label="Principal móvil"
         >
@@ -89,6 +93,9 @@ export function SiteHeader() {
             {mainNav.map((item) => (
               <NavLink key={item.href} {...item} onClick={() => setOpen(false)} />
             ))}
+            <div className="mt-2 px-1">
+              <AccountControls viewer={viewer} compact onNavigate={() => setOpen(false)} />
+            </div>
             <a
               href="mailto:info@ucu.org.ar"
               className="mt-2 rounded-md bg-ucu-blue px-4 py-3 text-center font-display text-xs font-semibold uppercase tracking-wide text-white"
@@ -100,6 +107,78 @@ export function SiteHeader() {
         </nav>
       </div>
     </header>
+  );
+}
+
+function displayName(viewer: Pick<MemberViewer, 'name' | 'email'>): string {
+  const name = viewer.name.trim();
+  if (name) return name.split(' ')[0] ?? name;
+  return viewer.email.split('@')[0] || viewer.email;
+}
+
+function AccountControls({
+  viewer,
+  compact,
+  onNavigate,
+}: {
+  viewer?: Pick<MemberViewer, 'name' | 'email' | 'source'> | null;
+  compact: boolean;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+  const onAuthPage =
+    pathname === MEMBER_LOGIN_PATH ||
+    pathname.startsWith(`${MEMBER_LOGIN_PATH}/`) ||
+    pathname === '/registrarse';
+
+  async function logout() {
+    await fetch('/api/auth/session', { method: 'DELETE', credentials: 'include' });
+    window.location.href = '/';
+  }
+
+  if (!viewer) {
+    if (onAuthPage) return null;
+    return (
+      <Link
+        href={MEMBER_LOGIN_PATH}
+        onClick={onNavigate}
+        className={
+          compact
+            ? 'block rounded-md px-3.5 py-2 font-display text-[0.8rem] font-semibold uppercase tracking-wide text-ucu-blue'
+            : 'hidden rounded-md border border-[var(--border-strong)] px-3 py-2 font-display text-xs font-semibold uppercase tracking-wide text-[var(--ink)] transition hover:border-ucu-blue/40 hover:text-ucu-blue sm:inline-flex'
+        }
+      >
+        Ingresar
+      </Link>
+    );
+  }
+
+  return (
+    <div className={compact ? 'flex flex-col gap-1 px-3.5 py-2' : 'hidden items-center gap-2 sm:flex'}>
+      <span className="font-display text-xs font-semibold text-[var(--ink-muted)]">
+        {displayName(viewer)}
+      </span>
+      {viewer.source === 'member' ? (
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            void logout();
+          }}
+          className="font-display text-xs font-semibold uppercase tracking-wide text-ucu-blue transition hover:text-[#004a80]"
+        >
+          Salir
+        </button>
+      ) : (
+        <Link
+          href="/admin"
+          onClick={onNavigate}
+          className="font-display text-xs font-semibold uppercase tracking-wide text-ucu-blue transition hover:text-[#004a80]"
+        >
+          Panel
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -163,6 +242,7 @@ export function SiteFooter() {
               </a>
             </li>
           </ul>
+          <SiteSocialLinks className="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-display text-sm text-white/70" />
         </div>
       </div>
       <div className="border-t border-white/10 py-5 text-center font-display text-xs text-white/40">

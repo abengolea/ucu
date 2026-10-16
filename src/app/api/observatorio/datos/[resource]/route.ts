@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import {
   getCiudades,
   getDivisas,
@@ -27,6 +28,9 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ resource: string }> }
 ) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const { resource } = await context.params;
 
   if (!ALLOWED.has(resource)) {

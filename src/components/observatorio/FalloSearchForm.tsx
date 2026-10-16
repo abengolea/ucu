@@ -64,7 +64,9 @@ function toQuery(form: FormState): string {
 
 async function fetchDatos<T>(path: string, params?: Record<string, string>): Promise<T> {
   const query = params ? `?${new URLSearchParams(params).toString()}` : '';
-  const response = await fetch(`/api/observatorio/datos/${path}${query}`);
+  const response = await fetch(`/api/observatorio/datos/${path}${query}`, {
+    credentials: 'include',
+  });
   if (!response.ok) throw new Error(`Error al cargar ${path}`);
   return response.json() as Promise<T>;
 }

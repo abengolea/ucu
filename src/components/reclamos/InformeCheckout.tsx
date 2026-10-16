@@ -8,6 +8,7 @@ type InformeCheckoutProps = {
   disponible: boolean;
   precioLabel: string;
   pagosConfigurados: boolean;
+  defaultEmail?: string;
 };
 
 export function InformeCheckout({
@@ -15,9 +16,10 @@ export function InformeCheckout({
   disponible,
   precioLabel,
   pagosConfigurados,
+  defaultEmail = '',
 }: InformeCheckoutProps) {
   const [showCheckout, setShowCheckout] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(defaultEmail);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +32,7 @@ export function InformeCheckout({
       const res = await fetch('/api/informes/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ empresaId, email }),
       });
       const data = await res.json();

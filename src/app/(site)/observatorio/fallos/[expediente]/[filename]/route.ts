@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { falloStoragePath } from '@/lib/fallos-files';
 import { getAdminStorage } from '@/lib/firebase-admin';
+import { requireMemberApi } from '@/lib/member-session';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ expediente: string; filename: string }> }
 ) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const { expediente: expedienteRaw, filename: filenameRaw } = await context.params;
   const expediente = Number(expedienteRaw);
   const filename = decodeURIComponent(filenameRaw);
@@ -35,7 +39,7 @@ export async function GET(
       headers: {
         'Content-Type': metadata.contentType || 'application/pdf',
         'Content-Disposition': `inline; filename="${filename}"`,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch {

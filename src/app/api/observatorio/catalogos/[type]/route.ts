@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import {
   createEmpresaInFirestore,
   createEtiquetaInFirestore,
@@ -10,6 +11,9 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ type: string }> }
 ) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const { type } = await context.params;
   if (!ALLOWED.has(type)) {
     return NextResponse.json({ error: 'Tipo no permitido' }, { status: 404 });

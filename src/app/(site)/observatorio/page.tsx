@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildPageMetadata({
   title: 'Observatorio de fallos de consumo',
   description:
-    'El Observatorio UCU es una base pública de fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado.',
+    'El Observatorio UCU reúne fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado. Consulta gratuita con registro.',
   path: '/observatorio',
   keywords: [
     'observatorio de fallos',
@@ -37,7 +37,7 @@ export default async function ObservatorioPage() {
           webPageJsonLd({
             title: 'Observatorio de fallos de consumo',
             description:
-              'El Observatorio UCU es una base pública de fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado.',
+              'El Observatorio UCU reúne fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado. Consulta gratuita con registro.',
             path: '/observatorio',
             type: 'CollectionPage',
           }),

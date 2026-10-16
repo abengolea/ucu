@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import { buildInformeStatsSnapshot } from '@/lib/informe-data';
 import {
   createInformePedido,
@@ -26,6 +27,9 @@ export const runtime = 'nodejs';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   if (!isMercadoPagoConfigured()) {
     return NextResponse.json(
       { error: 'Pagos no configurados. Contactá a UCU para habilitar informes.' },
@@ -57,7 +61,8 @@ export async function POST(request: NextRequest) {
   }
 
   const empresaId = Number(body.empresaId);
-  const email = (body.email ?? '').trim().toLowerCase();
+  const requestedEmail = (body.email ?? '').trim().toLowerCase();
+  const email = EMAIL_RE.test(requestedEmail) ? requestedEmail : access.email;
 
   if (!Number.isFinite(empresaId) || empresaId <= 0) {
     return NextResponse.json({ error: 'empresaId inválido' }, { status: 400 });
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const precioCents = getInformePrecioCents();
+    const precioCents = await getInformePrecioCents();
     const pedido = await createInformePedido({
       empresaId: teaser.empresaId,
       empresaNombre: teaser.empresaNombre,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import {
   applyStatsSessionCookie,
   enforceRateLimit,
@@ -14,6 +15,9 @@ const HOUR_MS = 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 
 export async function GET(request: NextRequest) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const q = (request.nextUrl.searchParams.get('q') ?? '').trim();
   if (q.length < 2) {
     return NextResponse.json([]);

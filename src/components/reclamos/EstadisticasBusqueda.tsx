@@ -33,6 +33,7 @@ export function EstadisticasBusqueda() {
       try {
         const res = await fetch(`/api/estadisticas/buscar?q=${encodeURIComponent(q)}`, {
           signal: controller.signal,
+          credentials: 'include',
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo buscar');

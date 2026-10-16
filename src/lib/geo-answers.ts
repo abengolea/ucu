@@ -13,10 +13,10 @@ export const GEO_PLAN_AHORRO =
   'Un plan de ahorro automotor no es un crédito: es un sistema de capitalización en grupo donde la cuota se mueve con el precio del auto y las reglas de la administradora.';
 
 export const GEO_OBSERVATORIO =
-  'El Observatorio UCU es una base pública de fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado.';
+  'El Observatorio UCU es una base de fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado. Se consulta con registro gratuito (Google o email).';
 
 export const GEO_ESTADISTICAS =
-  'UCU publica el total de denuncias de consumo recibidas contra cada empresa. El número es gratuito; el desglose por causas sale en un PDF certificable.';
+  'UCU publica el total de denuncias de consumo recibidas contra cada empresa. La consulta es gratuita con registro; el desglose por causas sale en un PDF certificable.';
 
 export const GEO_EDUCACION =
   'Educación financiera de UCU es un curso gratuito para consumidores argentinos: presupuesto, crédito, tasas y sobreendeudamiento, con calculadoras y fuentes oficiales (BCRA, CNV).';

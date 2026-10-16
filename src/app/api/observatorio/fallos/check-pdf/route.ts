@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireMemberApi } from '@/lib/member-session';
 import { findDuplicateFalloForPdfBuffer } from '@/lib/fallo-pdf-duplicate';
 import { validateFalloPdfFile } from '@/lib/fallo-request-body';
 
 const MAX_PDF_BYTES = 12 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
+  const access = await requireMemberApi(request);
+  if (access instanceof NextResponse) return access;
+
   const formData = await request.formData();
   const file = formData.get('pdf');
 

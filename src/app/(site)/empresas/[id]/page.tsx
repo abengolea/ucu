@@ -11,6 +11,7 @@ import {
   INFORME_MIN_CASOS,
 } from '@/lib/empresa-stats-public';
 import { isMercadoPagoConfigured } from '@/lib/mercadopago';
+import { getViewer } from '@/lib/member-session';
 import {
   breadcrumbJsonLd,
   buildPageMetadata,
@@ -67,7 +68,10 @@ export default async function EmpresaPublicPage({
   const empresaId = Number(id);
   if (!Number.isFinite(empresaId) || empresaId <= 0) notFound();
 
-  const stats = await getPublicEmpresaStats(empresaId);
+  const [stats, viewer] = await Promise.all([
+    getPublicEmpresaStats(empresaId),
+    getViewer(),
+  ]);
   if (!stats) notFound();
 
   const total = stats.stats.total;
@@ -131,6 +135,7 @@ export default async function EmpresaPublicPage({
             disponible={puedeInforme && isMercadoPagoConfigured()}
             precioLabel={formatPrecioArs(precioCents)}
             pagosConfigurados={isMercadoPagoConfigured()}
+            defaultEmail={viewer?.email ?? ''}
           />
         </section>
       ) : (

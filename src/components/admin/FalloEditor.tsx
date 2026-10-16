@@ -53,7 +53,9 @@ type FormState = {
 
 async function fetchCatalog(path: string, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params).toString()}` : '';
-  const response = await fetch(`/api/observatorio/datos/${path}${query}`);
+  const response = await fetch(`/api/observatorio/datos/${path}${query}`, {
+    credentials: 'include',
+  });
   if (!response.ok) throw new Error(`No se pudo cargar ${path}`);
   return response.json();
 }
