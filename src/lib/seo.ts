@@ -381,6 +381,18 @@ export function legalDocumentJsonLd({
   };
 }
 
+function datasetOrganization() {
+  return {
+    '@type': 'Organization',
+    name: 'Usuarios y Consumidores Unidos',
+    url: getSiteUrl(),
+    logo: {
+      '@type': 'ImageObject',
+      url: absoluteUrl('/brand/logo-ucu.png'),
+    },
+  };
+}
+
 export function datasetJsonLd({
   title,
   description,
@@ -396,6 +408,7 @@ export function datasetJsonLd({
   measurement?: string;
   dateModified?: string;
 }) {
+  const organization = datasetOrganization();
   return {
     '@context': 'https://schema.org',
     '@type': 'Dataset',
@@ -404,8 +417,8 @@ export function datasetJsonLd({
     url: absoluteUrl(path),
     inLanguage: 'es-AR',
     isAccessibleForFree: true,
-    creator: { '@id': `${getSiteUrl()}/#organization` },
-    publisher: { '@id': `${getSiteUrl()}/#organization` },
+    creator: organization,
+    publisher: organization,
     variableMeasured,
     ...(measurement ? { measurementTechnique: measurement } : {}),
     ...(dateModified ? { dateModified } : {}),
