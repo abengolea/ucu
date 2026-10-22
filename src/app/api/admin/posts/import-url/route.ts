@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminPermission } from '@/lib/admin-session';
 import { importArticleFromUrl } from '@/lib/article-import';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   if (!requireAdminPermission(request, 'posts:write')) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { spawn } from 'node:child_process';
 import { decodeHtmlEntities } from '@/lib/format';
 
 const MAX_HTML_BYTES = 3 * 1024 * 1024;
@@ -19,7 +20,15 @@ const STOP_HEADINGS = [
   'leé también',
   'lee tambien',
   'newsletter',
+  'contacto con la redaccion',
+  'comentarios',
 ];
+
+const BROWSER_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+};
 
 export type ImportedArticleImage = {
   base64: string;
@@ -150,6 +159,48 @@ function absoluteUrl(base: string, maybeRelative: string): string {
   }
 }
 
+function stripNoiseHtml(html: string): string {
+  return html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<blockquote\b[^>]*class="[^"]*twitter-tweet[^"]*"[\s\S]*?<\/blockquote>/gi, ' ')
+    .replace(/<figure\b[^>]*class="[^"]*(?:wp-block-embed|twitter)[^"]*"[\s\S]*?<\/figure>/gi, ' ');
+}
+
+function looksLikeChallengePage(html: string): boolean {
+  return /just a moment|cf-mitigated|attention required|performing security verification|cdn-cgi\/challenge/i.test(
+    html
+  );
+}
+
+function wordpressSlugFromUrl(pageUrl: URL): string | null {
+  const parts = pageUrl.pathname.split('/').filter(Boolean);
+  if (!parts.length) return null;
+  let slug = parts[parts.length - 1] || '';
+  if (/^(amp|embed|feed)$/i.test(slug)) {
+    slug = parts[parts.length - 2] || '';
+  }
+  if (!slug || !/^[a-z0-9][a-z0-9-]{2,}$/i.test(slug)) return null;
+  return slug;
+}
+
+type WpRendered = { rendered?: string };
+type WpPost = {
+  title?: WpRendered;
+  excerpt?: WpRendered;
+  content?: WpRendered;
+  link?: string;
+  featured_media?: number;
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{ source_url?: string }>;
+  };
+};
+
+function wpText(value?: WpRendered): string {
+  return cleanText(value?.rendered || '');
+}
+
 function extractArticleChunk(html: string): string {
   const openPatterns = [
     /<(?:div|section|article)\b[^>]*class="(?:[^"]*\s)?article-content(?:\s[^"]*)?"[^>]*>/i,
@@ -259,7 +310,25 @@ function buildContentHtml(
   return { content: blocks.join('\n'), warnings };
 }
 
-async function fetchHtml(url: string): Promise<string> {
+type FetchedUrl = {
+  ok: boolean;
+  status: number;
+  buffer: Buffer;
+  contentType: string;
+};
+
+const CURL_META = '\n__UCU_META__';
+
+function isUsableResponse(result: FetchedUrl): boolean {
+  if (!result.ok) return false;
+  if (!/html|json|text|xml/i.test(result.contentType) && result.contentType) {
+    return true;
+  }
+  const head = result.buffer.subarray(0, 2500).toString('utf8');
+  return !looksLikeChallengePage(head);
+}
+
+async function fetchWithNode(url: string, accept: string): Promise<FetchedUrl> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -268,23 +337,18 @@ async function fetchHtml(url: string): Promise<string> {
       redirect: 'follow',
       signal: controller.signal,
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml',
-        'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+        ...BROWSER_HEADERS,
+        Accept: accept,
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`El sitio respondió ${response.status}`);
-    }
-
     const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength > MAX_HTML_BYTES) {
-      throw new Error('La página es demasiado grande para importar');
-    }
-
-    return buffer.toString('utf8');
+    return {
+      ok: response.ok,
+      status: response.status,
+      buffer,
+      contentType: (response.headers.get('content-type') || '').split(';')[0].trim(),
+    };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Tiempo de espera agotado al leer la nota');
@@ -293,6 +357,99 @@ async function fetchHtml(url: string): Promise<string> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchWithCurl(url: string, accept: string): Promise<FetchedUrl | null> {
+  return new Promise((resolve) => {
+    const child = spawn(
+      process.platform === 'win32' ? 'curl.exe' : 'curl',
+      [
+        '-sS',
+        '-L',
+        '--max-time',
+        String(Math.ceil(FETCH_TIMEOUT_MS / 1000)),
+        '--compressed',
+        '-A',
+        BROWSER_HEADERS['User-Agent'],
+        '-H',
+        `Accept: ${accept}`,
+        '-H',
+        `Accept-Language: ${BROWSER_HEADERS['Accept-Language']}`,
+        '-w',
+        `${CURL_META}%{http_code}|%{content_type}`,
+        url,
+      ],
+      { windowsHide: true }
+    );
+
+    const chunks: Buffer[] = [];
+    child.stdout.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    child.on('error', () => resolve(null));
+    child.on('close', (code) => {
+      if (code !== 0) {
+        resolve(null);
+        return;
+      }
+      const raw = Buffer.concat(chunks);
+      const marker = Buffer.from(CURL_META);
+      const idx = raw.lastIndexOf(marker);
+      if (idx < 0) {
+        resolve(null);
+        return;
+      }
+      const meta = raw.subarray(idx + marker.length).toString('utf8').trim();
+      const [statusRaw, contentType = ''] = meta.split('|');
+      const status = Number(statusRaw);
+      resolve({
+        ok: status >= 200 && status < 300,
+        status: Number.isFinite(status) ? status : 0,
+        buffer: raw.subarray(0, idx),
+        contentType: contentType.split(';')[0].trim(),
+      });
+    });
+  });
+}
+
+async function fetchUrl(url: string, accept: string): Promise<FetchedUrl> {
+  let nodeResult: FetchedUrl | null = null;
+  let nodeError: unknown = null;
+
+  try {
+    nodeResult = await fetchWithNode(url, accept);
+    if (isUsableResponse(nodeResult)) return nodeResult;
+  } catch (error) {
+    nodeError = error;
+  }
+
+  const curlResult = await fetchWithCurl(url, accept);
+  if (curlResult && isUsableResponse(curlResult)) return curlResult;
+  if (curlResult) return curlResult;
+  if (nodeResult) return nodeResult;
+  if (nodeError instanceof Error && nodeError.message) throw nodeError;
+  throw new Error('No se pudo leer la nota');
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  const response = await fetchUrl(url, 'text/html,application/xhtml+xml');
+  if (!response.ok) {
+    throw new Error(`El sitio respondió ${response.status}`);
+  }
+  if (response.buffer.byteLength > MAX_HTML_BYTES) {
+    throw new Error('La página es demasiado grande para importar');
+  }
+  const html = response.buffer.toString('utf8');
+  if (looksLikeChallengePage(html)) {
+    throw new Error('El sitio respondió 403');
+  }
+  return html;
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+  const response = await fetchUrl(url, 'application/json,text/plain,*/*');
+  if (!response.ok) {
+    throw new Error(`El sitio respondió ${response.status}`);
+  }
+  return JSON.parse(response.buffer.toString('utf8'));
 }
 
 async function downloadImage(
@@ -306,27 +463,13 @@ async function downloadImage(
   for (const candidate of candidates) {
     try {
       assertPublicHttpUrl(candidate);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      const response = await fetch(candidate, {
-        redirect: 'follow',
-        signal: controller.signal,
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          Accept: 'image/*,*/*;q=0.8',
-        },
-      }).finally(() => clearTimeout(timer));
-
+      const response = await fetchUrl(candidate, 'image/*,*/*;q=0.8');
       if (!response.ok) continue;
 
-      const contentType = (response.headers.get('content-type') || 'image/jpeg')
-        .split(';')[0]
-        .trim()
-        .toLowerCase();
+      const contentType = (response.contentType || 'image/jpeg').toLowerCase();
       if (!contentType.startsWith('image/')) continue;
 
-      const buffer = Buffer.from(await response.arrayBuffer());
+      const buffer = response.buffer;
       if (!buffer.byteLength || buffer.byteLength > MAX_IMAGE_BYTES) continue;
 
       const ext =
@@ -360,37 +503,44 @@ async function downloadImage(
   return null;
 }
 
-export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArticle> {
-  const parsed = assertPublicHttpUrl(rawUrl);
-  const url = parsed.toString();
-  const html = await fetchHtml(url);
-
-  const title = getTitle(html);
+async function assembleArticle(input: {
+  url: string;
+  html: string;
+  title?: string;
+  excerpt?: string;
+  sourceName?: string;
+  imageUrl?: string | null;
+}): Promise<ImportedArticle> {
+  const html = stripNoiseHtml(input.html);
+  const title = input.title || getTitle(html);
   if (!title) throw new Error('No se pudo detectar el título de la nota');
 
   const excerpt =
+    input.excerpt ||
     getMeta(html, 'og:description') ||
     getMeta(html, 'twitter:description') ||
     getMeta(html, 'description') ||
     '';
 
   const sourceName =
+    input.sourceName ||
     getMeta(html, 'og:site_name') ||
     getMeta(html, 'application-name') ||
-    hostnameLabel(url);
+    hostnameLabel(input.url);
 
   const imageRaw =
+    input.imageUrl ||
     getMeta(html, 'og:image') ||
     getMeta(html, 'og:image:url') ||
     getMeta(html, 'twitter:image') ||
     getMeta(html, 'twitter:image:src');
 
   const chunk = extractArticleChunk(html);
-  const { content, warnings } = buildContentHtml(chunk, sourceName, url, excerpt);
+  const { content, warnings } = buildContentHtml(chunk, sourceName, input.url, excerpt);
 
   let image: ImportedArticleImage | null = null;
   if (imageRaw) {
-    image = await downloadImage(absoluteUrl(url, imageRaw), title);
+    image = await downloadImage(absoluteUrl(input.url, imageRaw), title);
     if (!image) {
       warnings.push('No se pudo copiar la imagen destacada; podés subirla a mano.');
     }
@@ -399,7 +549,7 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
   }
 
   return {
-    url,
+    url: input.url,
     title,
     excerpt,
     content,
@@ -407,4 +557,85 @@ export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArti
     image,
     warnings,
   };
+}
+
+async function wordpressFeaturedImage(
+  origin: string,
+  post: WpPost
+): Promise<string | null> {
+  const embedded = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+  if (embedded) return embedded;
+
+  const mediaId = Number(post.featured_media || 0);
+  if (!mediaId) return null;
+
+  const endpoints = [
+    `${origin}/?rest_route=/wp/v2/media/${mediaId}`,
+    `${origin}/wp-json/wp/v2/media/${mediaId}`,
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const payload = (await fetchJson(endpoint)) as { source_url?: string };
+      if (payload?.source_url) return payload.source_url;
+    } catch {
+      // try next REST shape
+    }
+  }
+
+  return null;
+}
+
+async function importFromWordpressApi(pageUrl: URL): Promise<ImportedArticle | null> {
+  const slug = wordpressSlugFromUrl(pageUrl);
+  if (!slug) return null;
+
+  const origin = pageUrl.origin;
+  const encoded = encodeURIComponent(slug);
+  const endpoints = [
+    `${origin}/?rest_route=/wp/v2/posts&slug=${encoded}&_embed=1`,
+    `${origin}/wp-json/wp/v2/posts?slug=${encoded}&_embed=1`,
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const payload = await fetchJson(endpoint);
+      const post = Array.isArray(payload) ? (payload[0] as WpPost | undefined) : undefined;
+      const contentHtml = post?.content?.rendered?.trim();
+      if (!post || !contentHtml) continue;
+
+      return await assembleArticle({
+        url: post.link || pageUrl.toString(),
+        html: `<article>${contentHtml}</article>`,
+        title: wpText(post.title),
+        excerpt: wpText(post.excerpt),
+        sourceName: hostnameLabel(pageUrl.toString()),
+        imageUrl: await wordpressFeaturedImage(origin, post),
+      });
+    } catch {
+      // Cloudflare often blocks /wp-json but allows ?rest_route=
+    }
+  }
+
+  return null;
+}
+
+export async function importArticleFromUrl(rawUrl: string): Promise<ImportedArticle> {
+  const parsed = assertPublicHttpUrl(rawUrl);
+  const url = parsed.toString();
+
+  try {
+    const html = await fetchHtml(url);
+    return await assembleArticle({ url, html });
+  } catch (error) {
+    const wordpress = await importFromWordpressApi(parsed);
+    if (wordpress) return wordpress;
+
+    if (error instanceof Error && /respondió 403/.test(error.message)) {
+      throw new Error(
+        'El diario bloqueó la lectura automática (403). Probá de nuevo o copiá el texto a mano.'
+      );
+    }
+    throw error;
+  }
 }
