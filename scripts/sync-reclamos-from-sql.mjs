@@ -77,9 +77,15 @@ async function syncCatalogs(db, pool) {
 
   if (dryRun) return;
 
+  const catalogMeta = await db.collection('migration_meta').doc('reclamos_catalogs').get();
+  const deletedCausaIds = catalogMeta.data()?.deletedCausaIds ?? [];
+
   await writeCatalogBatch(db, 'reclamos_estados', estados.rows, dryRun);
   await writeCatalogBatch(db, 'reclamos_grupos_estados', grupos, dryRun);
-  await writeCatalogBatch(db, 'reclamos_causas', causas, dryRun);
+  await writeCatalogBatch(db, 'reclamos_causas', causas, dryRun, {
+    protectAdminManaged: true,
+    skipIds: deletedCausaIds,
+  });
   await writeCatalogBatch(db, 'reclamos_tipos', tipos, dryRun);
 
   await db.collection('migration_meta').doc('reclamos_catalogs').set(

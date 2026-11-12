@@ -38,6 +38,8 @@
     "sync:reclamos:sample": "node scripts/sync-reclamos-from-sql.mjs --enrich-only --limit=10",
     "build:reclamos-index": "node scripts/build-reclamos-search-index.mjs",
     "build:reclamos-index:dry": "node scripts/build-reclamos-search-index.mjs --dry-run",
+    "import:causas-catalogo": "node scripts/import-causas-catalogo.mjs",
+    "import:causas-catalogo:dry": "node scripts/import-causas-catalogo.mjs --dry-run",
     "asignar:otras-empresas": "node scripts/asignar-otras-empresas.mjs",
     "asignar:otras-empresas:apply": "node scripts/asignar-otras-empresas.mjs --apply",
     "build:fallos-index": "node scripts/build-fallos-search-index.mjs",

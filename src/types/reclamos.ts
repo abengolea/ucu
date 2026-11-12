@@ -72,6 +72,11 @@ export type ReclamoCausaCatalog = {
   id: number;
   descripcion: string;
   activo: boolean;
+  source?: 'legacy' | 'admin' | 'import';
+  updatedAt?: string;
+  rubro?: string;
+  keywords?: string[];
+  prioridad?: string;
 };
 
 export type ReclamoTipo = {

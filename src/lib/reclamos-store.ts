@@ -363,8 +363,116 @@ export async function countAssignedReclamos(
   return counts.reduce((sum, n) => sum + n, 0);
 }
 
+const CAUSAS_COLLECTION = 'reclamos_causas';
+const CAUSAS_META_DOC = 'reclamos_catalogs';
+const CAUSA_DESCRIPCION_MAX = 200;
+
 export async function getReclamoCausasFromFirestore(): Promise<ReclamoCausaCatalog[]> {
-  return readCatalog<ReclamoCausaCatalog>('reclamos_causas');
+  return readCatalog<ReclamoCausaCatalog>(CAUSAS_COLLECTION);
+}
+
+function normalizeCausaDescripcion(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function causaDescripcionKey(value: string): string {
+  return normalizeCausaDescripcion(value)
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+async function getDeletedCausaIds(): Promise<number[]> {
+  const meta = await dbOrThrow().collection('migration_meta').doc(CAUSAS_META_DOC).get();
+  const ids = meta.data()?.deletedCausaIds;
+  if (!Array.isArray(ids)) return [];
+  return ids.map(Number).filter((id) => Number.isInteger(id) && id > 0);
+}
+
+function assertCausaDescripcion(descripcion: string): string {
+  const normalized = normalizeCausaDescripcion(descripcion);
+  if (!normalized) throw new Error('La descripción es requerida');
+  if (normalized.length > CAUSA_DESCRIPCION_MAX) {
+    throw new Error(`La descripción no puede superar ${CAUSA_DESCRIPCION_MAX} caracteres`);
+  }
+  return normalized;
+}
+
+export async function createReclamoCausa(input: {
+  descripcion: string;
+  activo?: boolean;
+}): Promise<ReclamoCausaCatalog> {
+  const descripcion = assertCausaDescripcion(input.descripcion);
+  const [existing, deletedIds] = await Promise.all([
+    getReclamoCausasFromFirestore(),
+    getDeletedCausaIds(),
+  ]);
+  const key = causaDescripcionKey(descripcion);
+  if (existing.some((causa) => causaDescripcionKey(causa.descripcion) === key)) {
+    throw new Error('Ya existe una causa con esa descripción');
+  }
+
+  const maxExisting = existing.reduce((max, causa) => Math.max(max, causa.id), 0);
+  const maxDeleted = deletedIds.reduce((max, id) => Math.max(max, id), 0);
+  const id = Math.max(maxExisting, maxDeleted) + 1;
+  const causa: ReclamoCausaCatalog = {
+    id,
+    descripcion,
+    activo: input.activo !== false,
+    source: 'admin',
+    updatedAt: new Date().toISOString(),
+  };
+  await dbOrThrow().collection(CAUSAS_COLLECTION).doc(String(id)).set(causa);
+  return causa;
+}
+
+export async function updateReclamoCausa(
+  id: number,
+  input: { descripcion?: string; activo?: boolean }
+): Promise<ReclamoCausaCatalog> {
+  if (!Number.isInteger(id) || id <= 0) throw new Error('ID inválido');
+  const ref = dbOrThrow().collection(CAUSAS_COLLECTION).doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('La causa no existe');
+
+  const current = snap.data() as ReclamoCausaCatalog;
+  const descripcion =
+    input.descripcion !== undefined
+      ? assertCausaDescripcion(input.descripcion)
+      : normalizeCausaDescripcion(current.descripcion || '');
+  if (!descripcion) throw new Error('La descripción es requerida');
+
+  if (input.descripcion !== undefined) {
+    const existing = await getReclamoCausasFromFirestore();
+    const key = causaDescripcionKey(descripcion);
+    if (existing.some((causa) => causa.id !== id && causaDescripcionKey(causa.descripcion) === key)) {
+      throw new Error('Ya existe una causa con esa descripción');
+    }
+  }
+
+  const causa: ReclamoCausaCatalog = {
+    id,
+    descripcion,
+    activo: input.activo !== undefined ? Boolean(input.activo) : current.activo !== false,
+    source: 'admin',
+    updatedAt: new Date().toISOString(),
+  };
+  await ref.set(causa, { merge: true });
+  return causa;
+}
+
+export async function deleteReclamoCausa(id: number): Promise<void> {
+  if (!Number.isInteger(id) || id <= 0) throw new Error('ID inválido');
+  const db = dbOrThrow();
+  const ref = db.collection(CAUSAS_COLLECTION).doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('La causa no existe');
+
+  await ref.delete();
+  await db
+    .collection('migration_meta')
+    .doc(CAUSAS_META_DOC)
+    .set({ deletedCausaIds: FieldValue.arrayUnion(id) }, { merge: true });
 }
 
 export async function listAdminReclamos(

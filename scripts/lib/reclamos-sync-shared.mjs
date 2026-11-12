@@ -284,17 +284,40 @@ export async function loadEnlacesByGuid(pool) {
   return map;
 }
 
-export async function writeCatalogBatch(db, collection, items, dryRun) {
+export async function writeCatalogBatch(db, collection, items, dryRun, options = {}) {
   if (!items.length) return;
+  const skipIds = new Set((options.skipIds ?? []).map((id) => String(id)));
+  const protectedIds = new Set();
+
+  if (options.protectAdminManaged) {
+    const snap = await db.collection(collection).get();
+    for (const doc of snap.docs) {
+      const source = doc.data()?.source;
+      if (source && source !== 'legacy') protectedIds.add(doc.id);
+    }
+  }
+
   const batchSize = 400;
+  let skipped = 0;
 
   for (let index = 0; index < items.length; index += batchSize) {
     const batch = db.batch();
+    let ops = 0;
     for (const item of items.slice(index, index + batchSize)) {
-      batch.set(db.collection(collection).doc(String(item.id)), item, { merge: true });
+      const id = String(item.id);
+      if (skipIds.has(id) || protectedIds.has(id)) {
+        skipped += 1;
+        continue;
+      }
+      batch.set(db.collection(collection).doc(id), item, { merge: true });
+      ops += 1;
     }
-    if (!dryRun) await batch.commit();
+    if (ops && !dryRun) await batch.commit();
     console.log(`${collection}: ${Math.min(index + batchSize, items.length)}/${items.length}`);
+  }
+
+  if (skipped) {
+    console.log(`${collection}: omitidas ${skipped} (gestionadas en admin o eliminadas)`);
   }
 }
 
