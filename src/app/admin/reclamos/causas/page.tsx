@@ -1,23 +1,26 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuth';
 import { RequirePermission } from '@/components/admin/AdminPermissionGuard';
-import type { ReclamoCausaCatalog } from '@/types/reclamos';
+import type { ReclamoCausaCatalog, ReclamoRubro } from '@/types/reclamos';
 
 type EstadoFiltro = 'todas' | 'activas' | 'inactivas';
 type FormState = {
   descripcion: string;
   activo: boolean;
+  rubro: string;
 };
 
-const EMPTY_FORM: FormState = { descripcion: '', activo: true };
+const EMPTY_FORM: FormState = { descripcion: '', activo: true, rubro: '' };
 
 export default function AdminReclamosCausasPage() {
   const user = useAdminUser();
   const canWrite = user.permissions.includes('reclamos:write');
   const [causas, setCausas] = useState<ReclamoCausaCatalog[]>([]);
+  const [catalogRubros, setCatalogRubros] = useState<ReclamoRubro[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>('todas');
@@ -34,10 +37,17 @@ export default function AdminReclamosCausasPage() {
     if (!options.silent) setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/reclamos/causas', { credentials: 'include' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al cargar');
+      const [causasRes, rubrosRes] = await Promise.all([
+        fetch('/api/admin/reclamos/causas', { credentials: 'include' }),
+        fetch('/api/admin/reclamos/rubros', { credentials: 'include' }),
+      ]);
+      const data = await causasRes.json();
+      if (!causasRes.ok) throw new Error(data.error || 'Error al cargar');
       setCausas(Array.isArray(data.causas) ? data.causas : []);
+      if (rubrosRes.ok) {
+        const rubrosData = await rubrosRes.json();
+        setCatalogRubros(Array.isArray(rubrosData.rubros) ? rubrosData.rubros : []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las causas');
     } finally {
@@ -47,6 +57,9 @@ export default function AdminReclamosCausasPage() {
 
   useEffect(() => {
     loadCausas();
+    const params = new URLSearchParams(window.location.search);
+    const rubroParam = params.get('rubro');
+    if (rubroParam) setRubroFiltro(rubroParam);
   }, []);
 
   function openCreate() {
@@ -58,7 +71,11 @@ export default function AdminReclamosCausasPage() {
 
   function openEdit(causa: ReclamoCausaCatalog) {
     setEditingId(causa.id);
-    setForm({ descripcion: causa.descripcion, activo: causa.activo !== false });
+    setForm({
+      descripcion: causa.descripcion,
+      activo: causa.activo !== false,
+      rubro: causa.rubro?.trim() ?? '',
+    });
     setShowForm(true);
     setError(null);
   }
@@ -96,6 +113,7 @@ export default function AdminReclamosCausasPage() {
         body: JSON.stringify({
           descripcion: form.descripcion,
           activo: form.activo,
+          rubro: form.rubro,
         }),
       });
       const data = await res.json();
@@ -241,6 +259,29 @@ export default function AdminReclamosCausasPage() {
                 placeholder="Ej. Incumplimiento de garantía"
               />
             </div>
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="causa-rubro">
+                Rubro
+              </label>
+              <select
+                id="causa-rubro"
+                value={form.rubro}
+                onChange={(e) => setForm((current) => ({ ...current, rubro: e.target.value }))}
+                className="w-full max-w-2xl rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#1a5fb4]"
+              >
+                <option value="">Sin rubro</option>
+                {form.rubro && !catalogRubros.some((rubro) => rubro.descripcion === form.rubro) ? (
+                  <option value={form.rubro}>{form.rubro}</option>
+                ) : null}
+                {catalogRubros
+                  .filter((rubro) => rubro.activo !== false || rubro.descripcion === form.rubro)
+                  .map((rubro) => (
+                    <option key={rubro.id} value={rubro.descripcion}>
+                      {rubro.descripcion}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <label className="mt-4 flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -291,6 +332,14 @@ export default function AdminReclamosCausasPage() {
                 </option>
               ))}
             </select>
+          ) : null}
+          {canWrite ? (
+            <Link
+              href="/admin/reclamos/rubros"
+              className="text-sm font-medium text-[#1a5fb4] hover:underline"
+            >
+              Administrar rubros
+            </Link>
           ) : null}
           <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
             {(

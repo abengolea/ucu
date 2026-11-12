@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  let body: { descripcion?: unknown; activo?: unknown };
+  let body: { descripcion?: unknown; activo?: unknown; rubro?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     const causa = await createReclamoCausa({
       descripcion: typeof body.descripcion === 'string' ? body.descripcion : '',
       activo: body.activo !== false,
+      rubro: typeof body.rubro === 'string' ? body.rubro : '',
     });
     return NextResponse.json({ causa }, { status: 201 });
   } catch (error) {

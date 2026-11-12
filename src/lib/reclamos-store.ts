@@ -398,9 +398,21 @@ function assertCausaDescripcion(descripcion: string): string {
   return normalized;
 }
 
+async function resolveCausaRubroName(value: string | null | undefined): Promise<string | undefined> {
+  if (value == null) return undefined;
+  const normalized = normalizeCausaDescripcion(value);
+  if (!normalized) return undefined;
+  await ensureReclamoRubrosFromCausas();
+  const rubros = await getReclamoRubrosFromFirestore();
+  const key = catalogNameKey(normalized);
+  const match = rubros.find((rubro) => catalogNameKey(rubro.descripcion) === key);
+  return match?.descripcion ?? normalized;
+}
+
 export async function createReclamoCausa(input: {
   descripcion: string;
   activo?: boolean;
+  rubro?: string | null;
 }): Promise<ReclamoCausaCatalog> {
   const descripcion = assertCausaDescripcion(input.descripcion);
   const [existing, deletedIds] = await Promise.all([
@@ -415,12 +427,14 @@ export async function createReclamoCausa(input: {
   const maxExisting = existing.reduce((max, causa) => Math.max(max, causa.id), 0);
   const maxDeleted = deletedIds.reduce((max, id) => Math.max(max, id), 0);
   const id = Math.max(maxExisting, maxDeleted) + 1;
+  const rubro = await resolveCausaRubroName(input.rubro);
   const causa: ReclamoCausaCatalog = {
     id,
     descripcion,
     activo: input.activo !== false,
     source: 'admin',
     updatedAt: new Date().toISOString(),
+    ...(rubro ? { rubro } : {}),
   };
   await dbOrThrow().collection(CAUSAS_COLLECTION).doc(String(id)).set(causa);
   return causa;
@@ -428,7 +442,7 @@ export async function createReclamoCausa(input: {
 
 export async function updateReclamoCausa(
   id: number,
-  input: { descripcion?: string; activo?: boolean }
+  input: { descripcion?: string; activo?: boolean; rubro?: string | null }
 ): Promise<ReclamoCausaCatalog> {
   if (!Number.isInteger(id) || id <= 0) throw new Error('ID inválido');
   const ref = dbOrThrow().collection(CAUSAS_COLLECTION).doc(String(id));
@@ -457,8 +471,20 @@ export async function updateReclamoCausa(
     source: 'admin',
     updatedAt: new Date().toISOString(),
   };
-  await ref.set(causa, { merge: true });
-  return causa;
+  const patch: Record<string, unknown> = { ...causa };
+  let nextRubro = current.rubro;
+  if (input.rubro !== undefined) {
+    const rubro = await resolveCausaRubroName(input.rubro);
+    if (rubro) {
+      patch.rubro = rubro;
+      nextRubro = rubro;
+    } else {
+      patch.rubro = FieldValue.delete();
+      nextRubro = undefined;
+    }
+  }
+  await ref.set(patch, { merge: true });
+  return { ...current, ...causa, rubro: nextRubro };
 }
 
 export async function deleteReclamoCausa(id: number): Promise<void> {
@@ -473,6 +499,221 @@ export async function deleteReclamoCausa(id: number): Promise<void> {
     .collection('migration_meta')
     .doc(CAUSAS_META_DOC)
     .set({ deletedCausaIds: FieldValue.arrayUnion(id) }, { merge: true });
+}
+
+const RUBROS_COLLECTION = CATALOG_COLLECTIONS.rubros;
+const RUBRO_DESCRIPCION_MAX = 120;
+
+function catalogNameKey(value: string): string {
+  return normalizeCausaDescripcion(value)
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+async function getDeletedRubroIds(): Promise<number[]> {
+  const meta = await dbOrThrow().collection('migration_meta').doc(CAUSAS_META_DOC).get();
+  const ids = meta.data()?.deletedRubroIds;
+  if (!Array.isArray(ids)) return [];
+  return ids.map(Number).filter((id) => Number.isInteger(id) && id > 0);
+}
+
+function assertRubroDescripcion(descripcion: string): string {
+  const normalized = normalizeCausaDescripcion(descripcion);
+  if (!normalized) throw new Error('El nombre del rubro es requerido');
+  if (normalized.length > RUBRO_DESCRIPCION_MAX) {
+    throw new Error(`El nombre no puede superar ${RUBRO_DESCRIPCION_MAX} caracteres`);
+  }
+  return normalized;
+}
+
+export async function ensureReclamoRubrosFromCausas(): Promise<void> {
+  const db = dbOrThrow();
+  const metaRef = db.collection('migration_meta').doc(CAUSAS_META_DOC);
+  const meta = await metaRef.get();
+  if (meta.data()?.rubrosSeededFromCausasAt) return;
+
+  const [rubros, causas, deletedIds] = await Promise.all([
+    getReclamoRubrosFromFirestore(),
+    getReclamoCausasFromFirestore(),
+    getDeletedRubroIds(),
+  ]);
+  const existingKeys = new Set(rubros.map((rubro) => catalogNameKey(rubro.descripcion)));
+  const missing: string[] = [];
+  for (const causa of causas) {
+    const name = normalizeCausaDescripcion(causa.rubro || '');
+    if (!name) continue;
+    const key = catalogNameKey(name);
+    if (existingKeys.has(key)) continue;
+    existingKeys.add(key);
+    missing.push(name);
+  }
+
+  missing.sort((a, b) => a.localeCompare(b, 'es'));
+  const maxExisting = rubros.reduce((max, rubro) => Math.max(max, rubro.id), 0);
+  const maxDeleted = deletedIds.reduce((max, id) => Math.max(max, id), 0);
+  let nextId = Math.max(maxExisting, maxDeleted);
+  const now = new Date().toISOString();
+  const counts = countCausasByRubro(causas);
+  const batch = db.batch();
+  let ops = 0;
+
+  for (const descripcion of missing) {
+    nextId += 1;
+    ops += 1;
+    batch.set(db.collection(RUBROS_COLLECTION).doc(String(nextId)), {
+      id: nextId,
+      descripcion,
+      activo: true,
+      source: 'import',
+      updatedAt: now,
+    } satisfies ReclamoRubro);
+  }
+
+  for (const rubro of rubros) {
+    const used = (counts.get(catalogNameKey(rubro.descripcion)) ?? 0) > 0;
+    if (used || rubro.source || rubro.activo === false) continue;
+    ops += 1;
+    batch.set(
+      db.collection(RUBROS_COLLECTION).doc(String(rubro.id)),
+      { activo: false, updatedAt: now },
+      { merge: true }
+    );
+  }
+
+  if (ops) await batch.commit();
+  await metaRef.set({ rubrosSeededFromCausasAt: now }, { merge: true });
+}
+
+function countCausasByRubro(causas: ReclamoCausaCatalog[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const causa of causas) {
+    const key = catalogNameKey(causa.rubro || '');
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export async function listReclamoRubrosForAdmin(): Promise<ReclamoRubro[]> {
+  await ensureReclamoRubrosFromCausas();
+  const [rubros, causas] = await Promise.all([
+    getReclamoRubrosFromFirestore(),
+    getReclamoCausasFromFirestore(),
+  ]);
+  const counts = countCausasByRubro(causas);
+  return rubros.map((rubro) => ({
+    ...rubro,
+    causasCount: counts.get(catalogNameKey(rubro.descripcion)) ?? 0,
+  }));
+}
+
+export async function createReclamoRubro(input: {
+  descripcion: string;
+  activo?: boolean;
+}): Promise<ReclamoRubro> {
+  const descripcion = assertRubroDescripcion(input.descripcion);
+  const [existing, deletedIds] = await Promise.all([
+    getReclamoRubrosFromFirestore(),
+    getDeletedRubroIds(),
+  ]);
+  const key = catalogNameKey(descripcion);
+  if (existing.some((rubro) => catalogNameKey(rubro.descripcion) === key)) {
+    throw new Error('Ya existe un rubro con ese nombre');
+  }
+
+  const maxExisting = existing.reduce((max, rubro) => Math.max(max, rubro.id), 0);
+  const maxDeleted = deletedIds.reduce((max, id) => Math.max(max, id), 0);
+  const id = Math.max(maxExisting, maxDeleted) + 1;
+  const rubro: ReclamoRubro = {
+    id,
+    descripcion,
+    activo: input.activo !== false,
+    source: 'admin',
+    updatedAt: new Date().toISOString(),
+    causasCount: 0,
+  };
+  await dbOrThrow().collection(RUBROS_COLLECTION).doc(String(id)).set({
+    id: rubro.id,
+    descripcion: rubro.descripcion,
+    activo: rubro.activo,
+    source: rubro.source,
+    updatedAt: rubro.updatedAt,
+  });
+  return rubro;
+}
+
+export async function updateReclamoRubro(
+  id: number,
+  input: { descripcion?: string; activo?: boolean }
+): Promise<ReclamoRubro> {
+  if (!Number.isInteger(id) || id <= 0) throw new Error('ID inválido');
+  const db = dbOrThrow();
+  const ref = db.collection(RUBROS_COLLECTION).doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('El rubro no existe');
+
+  const current = snap.data() as ReclamoRubro;
+  const descripcion =
+    input.descripcion !== undefined
+      ? assertRubroDescripcion(input.descripcion)
+      : normalizeCausaDescripcion(current.descripcion || '');
+  if (!descripcion) throw new Error('El nombre del rubro es requerido');
+
+  const oldKey = catalogNameKey(current.descripcion || '');
+  const newKey = catalogNameKey(descripcion);
+  if (input.descripcion !== undefined && newKey !== oldKey) {
+    const existing = await getReclamoRubrosFromFirestore();
+    if (existing.some((rubro) => rubro.id !== id && catalogNameKey(rubro.descripcion) === newKey)) {
+      throw new Error('Ya existe un rubro con ese nombre');
+    }
+  }
+
+  const rubro: ReclamoRubro = {
+    id,
+    descripcion,
+    activo: input.activo !== undefined ? Boolean(input.activo) : current.activo !== false,
+    source: 'admin',
+    updatedAt: new Date().toISOString(),
+  };
+  await ref.set(rubro, { merge: true });
+
+  if (newKey !== oldKey) {
+    const causas = await getReclamoCausasFromFirestore();
+    const matches = causas.filter((causa) => catalogNameKey(causa.rubro || '') === oldKey);
+    const batchSize = 400;
+    for (let index = 0; index < matches.length; index += batchSize) {
+      const batch = db.batch();
+      for (const causa of matches.slice(index, index + batchSize)) {
+        batch.set(
+          db.collection(CAUSAS_COLLECTION).doc(String(causa.id)),
+          { rubro: descripcion, updatedAt: rubro.updatedAt },
+          { merge: true }
+        );
+      }
+      await batch.commit();
+    }
+    rubro.causasCount = matches.length;
+  } else {
+    const causas = await getReclamoCausasFromFirestore();
+    rubro.causasCount = countCausasByRubro(causas).get(newKey) ?? 0;
+  }
+
+  return rubro;
+}
+
+export async function deleteReclamoRubro(id: number): Promise<void> {
+  if (!Number.isInteger(id) || id <= 0) throw new Error('ID inválido');
+  const db = dbOrThrow();
+  const ref = db.collection(RUBROS_COLLECTION).doc(String(id));
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('El rubro no existe');
+
+  await ref.delete();
+  await db
+    .collection('migration_meta')
+    .doc(CAUSAS_META_DOC)
+    .set({ deletedRubroIds: FieldValue.arrayUnion(id) }, { merge: true });
 }
 
 export async function listAdminReclamos(

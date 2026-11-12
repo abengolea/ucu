@@ -30,6 +30,9 @@ export type ReclamoRubro = {
   id: number;
   descripcion: string;
   activo: boolean;
+  source?: 'legacy' | 'admin' | 'import';
+  updatedAt?: string;
+  causasCount?: number;
 };
 
 export type ReclamoEmpresa = {

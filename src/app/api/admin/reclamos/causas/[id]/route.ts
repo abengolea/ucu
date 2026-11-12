@@ -34,7 +34,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
   }
 
-  let body: { descripcion?: unknown; activo?: unknown };
+  let body: { descripcion?: unknown; activo?: unknown; rubro?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -45,6 +45,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const causa = await updateReclamoCausa(id, {
       descripcion: typeof body.descripcion === 'string' ? body.descripcion : undefined,
       activo: typeof body.activo === 'boolean' ? body.activo : undefined,
+      rubro: typeof body.rubro === 'string' ? body.rubro : undefined,
     });
     return NextResponse.json({ causa });
   } catch (error) {
