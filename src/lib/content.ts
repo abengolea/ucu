@@ -1,10 +1,18 @@
 import { getAdminDb } from '@/lib/firebase-admin';
+import {
+  fillRelatedFallback,
+  rankRelatedPosts,
+  termsFromPost,
+  type RelatedPostMatch,
+} from '@/lib/related-posts';
 import type {
   AuthorDocument,
   CategoryDocument,
   ContentDocument,
   TagDocument,
 } from '@/types/content';
+
+export type { RelatedPostMatch } from '@/lib/related-posts';
 
 function dbOrThrow() {
   const db = getAdminDb();
@@ -67,6 +75,35 @@ export async function getPageBySlug(slug: string): Promise<ContentDocument | nul
   return mapDoc<ContentDocument>(doc.data()!);
 }
 
+async function queryPostsByAny(
+  field: 'tagSlugs' | 'categorySlugs',
+  values: string[],
+  limit: number
+): Promise<ContentDocument[]> {
+  const slugs = [...new Set(values.filter(Boolean))].slice(0, 10);
+  if (!slugs.length) return [];
+
+  const db = dbOrThrow();
+  const capped = Math.min(Math.max(limit, 12), 50);
+
+  try {
+    const snap = await db
+      .collection('posts')
+      .where(field, 'array-contains-any', slugs)
+      .orderBy('publishedAt', 'desc')
+      .limit(capped)
+      .get();
+    return publishedPosts(snap.docs);
+  } catch {
+    const snap = await db
+      .collection('posts')
+      .where(field, 'array-contains-any', slugs)
+      .limit(capped)
+      .get();
+    return publishedPosts(snap.docs);
+  }
+}
+
 export async function getPostsByCategory(
   categorySlug: string,
   limit = 50
@@ -79,6 +116,46 @@ export async function getPostsByCategory(
     .get();
 
   return publishedPosts(snap.docs).slice(0, limit);
+}
+
+export async function getPostsByTag(
+  tagSlug: string,
+  limit = 50
+): Promise<ContentDocument[]> {
+  const db = dbOrThrow();
+  const snap = await db
+    .collection('posts')
+    .where('tagSlugs', 'array-contains', tagSlug)
+    .limit(Math.min(limit * 2, 200))
+    .get();
+
+  return publishedPosts(snap.docs).slice(0, limit);
+}
+
+export async function getRelatedPosts(
+  post: ContentDocument,
+  limit = 4
+): Promise<RelatedPostMatch[]> {
+  const tagSlugs = termsFromPost(post.tags, post.tagSlugs).map((term) => term.slug);
+  const categorySlugs = termsFromPost(post.categories, post.categorySlugs).map(
+    (term) => term.slug
+  );
+
+  const [tagResult, categoryResult] = await Promise.allSettled([
+    queryPostsByAny('tagSlugs', tagSlugs, 40),
+    queryPostsByAny('categorySlugs', categorySlugs, 40),
+  ]);
+
+  const candidates: ContentDocument[] = [];
+  if (tagResult.status === 'fulfilled') candidates.push(...tagResult.value);
+  if (categoryResult.status === 'fulfilled') candidates.push(...categoryResult.value);
+
+  let ranked = rankRelatedPosts(post, candidates, limit);
+  if (ranked.length >= limit) return ranked;
+
+  const recent = await getRecentPosts(Math.max(limit + 12, 16)).catch(() => []);
+  ranked = fillRelatedFallback(ranked, recent, post.slug, limit);
+  return ranked;
 }
 
 export async function getCategories(): Promise<CategoryDocument[]> {
@@ -102,6 +179,17 @@ export async function getTags(): Promise<TagDocument[]> {
   return snap.docs
     .map((doc) => mapDoc<TagDocument>(doc.data()))
     .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+}
+
+export async function getTag(slug: string): Promise<TagDocument | null> {
+  const db = dbOrThrow();
+  const doc = await db.collection('tags').doc(slug).get();
+  if (doc.exists) return mapDoc<TagDocument>(doc.data()!);
+
+  const posts = await getPostsByTag(slug, 1).catch(() => []);
+  const fromPost = posts[0]?.tags.find((tag) => tag.slug === slug);
+  if (!fromPost) return null;
+  return { wpTermId: 0, slug: fromPost.slug, name: fromPost.name };
 }
 
 export async function getAuthors(): Promise<AuthorDocument[]> {

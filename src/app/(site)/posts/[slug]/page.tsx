@@ -5,8 +5,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CommentSection } from '@/components/comments/CommentSection';
 import { LinkedFalloBox } from '@/components/posts/LinkedFalloBox';
+import { RelatedNotes } from '@/components/posts/RelatedNotes';
 import { JsonLd } from '@/components/seo/JsonLd';
-import { getPostBySlug } from '@/lib/content';
+import { getPostBySlug, getRelatedPosts } from '@/lib/content';
 import { decodeHtmlEntities } from '@/lib/format';
 import { getFalloById } from '@/lib/observatorio';
 import { resolveMediaUrl, rewriteContentMediaUrls } from '@/lib/media';
@@ -64,10 +65,12 @@ export default async function PostDetailPage({
   const title = decodeHtmlEntities(post.title);
   const imageUrl = resolveMediaUrl(post.featuredImage?.url);
   const contentHtml = rewriteContentMediaUrls(ensureNoteHtml(post.content));
-  const linkedFallo =
+  const [linkedFallo, related] = await Promise.all([
     post.linkedFalloId && post.linkedFalloId > 0
-      ? await getFalloById(post.linkedFalloId).catch(() => null)
-      : null;
+      ? getFalloById(post.linkedFalloId).catch(() => null)
+      : Promise.resolve(null),
+    getRelatedPosts(post, 4).catch(() => []),
+  ]);
   const description = excerptToDescription(
     post.excerpt,
     `Nota de UCU sobre defensa del consumidor: ${title}`
@@ -155,22 +158,25 @@ export default async function PostDetailPage({
 
         {post.tags.length ? (
           <div className="mt-12 border-t border-[var(--border)] pt-8">
-            <h2 className="mb-3 font-display text-xs font-bold uppercase tracking-wide text-[var(--ink-faint)]">
-              Etiquetas
+            <h2 className="mb-3 font-display text-sm font-semibold text-[var(--ink)]">
+              Temas de esta nota
             </h2>
             <div className="flex flex-wrap gap-2">
               {post.tags.map((tag) => (
-                <span
+                <Link
                   key={tag.slug}
-                  className="rounded-md bg-[var(--surface-muted)] px-3 py-1 font-display text-xs text-[var(--ink-muted)]"
+                  href={`/etiqueta/${tag.slug}`}
+                  className="ucu-tag transition hover:bg-ucu-blue/10"
                 >
                   {tag.name}
-                </span>
+                </Link>
               ))}
             </div>
           </div>
         ) : null}
       </article>
+
+      <RelatedNotes current={post} related={related} />
 
       <CommentSection postSlug={slug} />
     </main>

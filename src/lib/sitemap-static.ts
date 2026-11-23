@@ -74,6 +74,9 @@ function inferSnapshotRoute(path: string): StaticSitemapRoute {
   if (path.startsWith('/categoria/')) {
     return { path, changeFrequency: 'weekly', priority: 0.6 };
   }
+  if (path.startsWith('/etiqueta/')) {
+    return { path, changeFrequency: 'weekly', priority: 0.55 };
+  }
   return { path, changeFrequency: 'monthly', priority: 0.5 };
 }
 

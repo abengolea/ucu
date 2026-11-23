@@ -17,6 +17,14 @@
       ]
     },
     {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tagSlugs", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "fallos",
       "queryScope": "COLLECTION",
       "fields": [
