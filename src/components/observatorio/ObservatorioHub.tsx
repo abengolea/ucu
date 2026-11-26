@@ -17,9 +17,9 @@ const DOORS = [
     index: '02',
     eyebrow: 'Empresas',
     title: 'Observatorio de empresas',
-    body: 'Páginas interactivas sobre compañías, armadas por miembros de UCU con asistencia de inteligencia artificial. Se leen acá.',
+    body: 'Análisis de compañías publicados por miembros de UCU, con datos y contexto. Consulta gratuita con registro.',
     cta: 'Ver las empresas',
-    note: 'Acceso libre',
+    note: 'Pedimos cuenta para consultar',
     accent: 'magenta' as const,
   },
 ];
@@ -53,11 +53,10 @@ export function ObservatorioHubHero() {
           UCU · Observatorio
         </p>
         <h1 className="mb-4 max-w-2xl font-display text-3xl font-extrabold leading-[1.08] tracking-tight text-balance md:text-5xl">
-          Un observatorio, dos lecturas
+          Observatorio
         </h1>
         <p className="max-w-xl font-serif text-base leading-relaxed text-white/80 md:text-lg">
-          Lo que ya dijeron los jueces sobre consumo, y lo que los miembros de
-          UCU publican sobre empresas. Mismo techo, dos puertas.
+          Fallos judiciales de consumo y análisis de empresas.
         </p>
       </div>
     </section>

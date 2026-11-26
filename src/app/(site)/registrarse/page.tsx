@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildPageMetadata({
   title: 'Crear cuenta',
   description:
-    'Registrate en UCU con Google o con email y contraseña para consultar el Observatorio de fallos y las estadísticas de denuncias. Es gratuito.',
+    'Registrate en UCU con Google o con email y contraseña para consultar el Observatorio y las estadísticas de denuncias. Es gratuito.',
   path: '/registrarse',
   noIndex: true,
 });

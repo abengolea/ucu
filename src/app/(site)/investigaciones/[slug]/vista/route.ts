@@ -33,7 +33,7 @@ export async function GET(
       'Content-Type': 'text/html; charset=utf-8',
       'X-Robots-Tag': 'noindex, nofollow',
       'X-Frame-Options': 'SAMEORIGIN',
-      'Cache-Control': 'public, max-age=60, s-maxage=300',
+      'Cache-Control': 'private, no-store',
     },
   });
 }

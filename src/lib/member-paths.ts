@@ -19,6 +19,7 @@ export function isObservatorioEmpresasPath(pathname: string): boolean {
 export function isProtectedPagePath(pathname: string): boolean {
   if (isObservatorioHubPath(pathname) || isObservatorioEmpresasPath(pathname)) return false;
   if (pathname.startsWith('/observatorio/')) return true;
+  if (pathname === '/investigaciones' || pathname.startsWith('/investigaciones/')) return true;
   if (pathname === '/reclamos/estadisticas' || pathname.startsWith('/reclamos/estadisticas/')) {
     return true;
   }
@@ -56,6 +57,14 @@ export function authGateCopy(nextPath?: string | null): {
   description: string;
 } {
   const next = safeNextPath(nextPath);
+  if (next.startsWith('/investigaciones')) {
+    return {
+      eyebrow: 'Observatorio de empresas',
+      title: 'Registrate para consultar los análisis de empresas',
+      description:
+        'El Observatorio de empresas publica análisis de compañías hechos por miembros de UCU. Es gratuito: ingresá con Google o con email y contraseña.',
+    };
+  }
   if (next.startsWith('/observatorio')) {
     return {
       eyebrow: 'Observatorio de fallos',
@@ -76,6 +85,6 @@ export function authGateCopy(nextPath?: string | null): {
     eyebrow: 'Cuenta UCU',
     title: 'Ingresá para continuar',
     description:
-      'Con una cuenta gratuita podés consultar el Observatorio de fallos y las estadísticas de denuncias por empresa.',
+      'Con una cuenta gratuita podés consultar el Observatorio y las estadísticas de denuncias por empresa.',
   };
 }

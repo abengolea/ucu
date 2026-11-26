@@ -72,10 +72,6 @@ export default async function InvestigacionesPage() {
               ? `${items.length} investigación${items.length === 1 ? '' : 'es'} publicada${items.length === 1 ? '' : 's'}`
               : 'Archivo'}
           </h2>
-          <p className="mt-2 max-w-prose font-serif text-[var(--ink-muted)]">
-            Cada pieza es una página de UCU: se entra acá, no a un chat ni a un
-            artefacto externo.
-          </p>
         </div>
 
         {error ? (

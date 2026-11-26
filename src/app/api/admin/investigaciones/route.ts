@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
     empresaId: parsed.empresaId,
     memberName: parsed.memberName,
     aiName: parsed.aiName,
+    ctaLabel: parsed.ctaLabel,
     originalUrl: parsed.originalUrl,
     html: stored.html,
     htmlStoragePath: stored.htmlStoragePath,

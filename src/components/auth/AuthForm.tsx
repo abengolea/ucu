@@ -126,7 +126,7 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
               <span className="mt-0.5 text-ucu-green" aria-hidden>
                 →
               </span>
-              Observatorio de fallos de consumo
+              Observatorio de fallos y de empresas
             </li>
             <li className="flex gap-3">
               <span className="mt-0.5 text-ucu-yellow" aria-hidden>

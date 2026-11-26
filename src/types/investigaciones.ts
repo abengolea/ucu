@@ -19,6 +19,7 @@ export type InvestigacionDocument = {
   empresaId: number | null;
   memberName: string;
   aiName: string;
+  ctaLabel?: string;
   originalUrl?: string;
   html: string;
   htmlStoragePath?: string;

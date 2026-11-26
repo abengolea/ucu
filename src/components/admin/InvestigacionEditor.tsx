@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { InvestigacionRow } from '@/components/investigaciones/InvestigacionesIndex';
 import { slugify } from '@/lib/slug';
 import { INVESTIGACION_AI_OPTIONS } from '@/types/investigaciones';
 import type { InvestigacionDocument } from '@/types/investigaciones';
@@ -24,6 +25,12 @@ function toDatetimeLocal(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function toPreviewIso(value: string): string {
+  if (!value) return new Date().toISOString();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
 export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorProps) {
   const [loadingDoc, setLoadingDoc] = useState(mode === 'edit');
   const [title, setTitle] = useState('');
@@ -35,6 +42,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
   const [empresaHits, setEmpresaHits] = useState<EmpresaHit[]>([]);
   const [memberName, setMemberName] = useState('');
   const [aiName, setAiName] = useState('Claude');
+  const [ctaLabel, setCtaLabel] = useState('Abrir investigación');
   const [originalUrl, setOriginalUrl] = useState('');
   const [html, setHtml] = useState('');
   const [status, setStatus] = useState<'publish' | 'draft'>('draft');
@@ -76,6 +84,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
         setEmpresaId(item.empresaId ? String(item.empresaId) : '');
         setMemberName(item.memberName);
         setAiName(item.aiName);
+        setCtaLabel(item.ctaLabel || 'Abrir investigación');
         setOriginalUrl(item.originalUrl || '');
         setHtml(item.html || '');
         setStatus(item.status === 'draft' ? 'draft' : 'publish');
@@ -134,6 +143,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
     form.append('empresaId', empresaId);
     form.append('memberName', memberName);
     form.append('aiName', aiName);
+    form.append('ctaLabel', ctaLabel);
     form.append('originalUrl', originalUrl);
     form.append('html', html);
     form.append('status', status);
@@ -242,6 +252,29 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
           ) : null}
 
           <div>
+            <h2 className="font-semibold text-slate-900">Ficha del listado</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Esto es lo que se ve en Observatorio de empresas. Cambiá los campos y se
+              actualiza abajo.
+            </p>
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-5 md:px-8">
+              <InvestigacionRow
+                preview
+                item={{
+                  slug: slug || 'preview',
+                  title,
+                  excerpt,
+                  empresaNombre,
+                  memberName,
+                  aiName,
+                  publishedAt: toPreviewIso(publishedAt),
+                  ctaLabel,
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="mb-1 block text-sm font-medium">Título *</label>
             <input
               value={title}
@@ -317,7 +350,44 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
               onChange={(e) => setExcerpt(e.target.value)}
               rows={3}
               className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1a5fb4]"
-              placeholder="Una o dos frases para el listado público"
+              placeholder="Una o dos frases para el listado"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Miembro UCU *</label>
+              <input
+                value={memberName}
+                onChange={(e) => setMemberName(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1a5fb4]"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">IA usada *</label>
+              <input
+                list="investigacion-ai"
+                value={aiName}
+                onChange={(e) => setAiName(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1a5fb4]"
+                required
+              />
+              <datalist id="investigacion-ai">
+                {INVESTIGACION_AI_OPTIONS.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Texto del enlace</label>
+            <input
+              value={ctaLabel}
+              onChange={(e) => setCtaLabel(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-[#1a5fb4]"
+              placeholder="Abrir investigación"
             />
           </div>
 
@@ -388,27 +458,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
-            <h2 className="mb-4 font-semibold text-slate-900">Quién y con qué IA</h2>
-            <label className="mb-1 block text-sm font-medium text-slate-600">Miembro UCU *</label>
-            <input
-              value={memberName}
-              onChange={(e) => setMemberName(e.target.value)}
-              className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-            <label className="mb-1 block text-sm font-medium text-slate-600">IA usada *</label>
-            <input
-              list="investigacion-ai"
-              value={aiName}
-              onChange={(e) => setAiName(e.target.value)}
-              className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-            <datalist id="investigacion-ai">
-              {INVESTIGACION_AI_OPTIONS.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
+            <h2 className="mb-4 font-semibold text-slate-900">Fuente</h2>
             <label className="mb-1 block text-sm font-medium text-slate-600">
               Link original (opcional)
             </label>

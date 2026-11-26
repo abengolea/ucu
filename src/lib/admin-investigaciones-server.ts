@@ -13,6 +13,7 @@ export type ParsedInvestigacionForm = {
   empresaId: number | null;
   memberName: string;
   aiName: string;
+  ctaLabel?: string;
   originalUrl?: string;
   html: string;
   status: InvestigacionStatus;
@@ -33,6 +34,7 @@ export async function parseInvestigacionForm(
   }
 
   const originalUrl = String(form.get('originalUrl') || '').trim();
+  const ctaLabel = String(form.get('ctaLabel') || '').trim();
 
   return {
     title: String(form.get('title') || '').trim(),
@@ -42,6 +44,7 @@ export async function parseInvestigacionForm(
     empresaId: Number.isFinite(empresaId) && empresaId > 0 ? empresaId : null,
     memberName: String(form.get('memberName') || '').trim(),
     aiName: String(form.get('aiName') || '').trim(),
+    ctaLabel: ctaLabel || undefined,
     originalUrl: originalUrl || undefined,
     html,
     status: statusRaw === 'draft' ? 'draft' : 'publish',
@@ -115,6 +118,7 @@ export function buildInvestigacionDocument(input: {
   empresaId: number | null;
   memberName: string;
   aiName: string;
+  ctaLabel?: string;
   originalUrl?: string;
   html: string;
   htmlStoragePath?: string;
@@ -136,6 +140,7 @@ export function buildInvestigacionDocument(input: {
     publishedAt: input.publishedAt,
     modifiedAt: input.modifiedAt,
     isFullDocument: input.isFullDocument,
+    ...(input.ctaLabel ? { ctaLabel: input.ctaLabel } : {}),
     ...(input.originalUrl ? { originalUrl: input.originalUrl } : {}),
     ...(input.htmlStoragePath ? { htmlStoragePath: input.htmlStoragePath } : {}),
   };

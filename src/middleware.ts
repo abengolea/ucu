@@ -71,6 +71,8 @@ export const config = {
   matcher: [
     '/observatorio',
     '/observatorio/:path*',
+    '/investigaciones',
+    '/investigaciones/:path*',
     '/reclamos/estadisticas',
     '/reclamos/estadisticas/:path*',
     '/empresas/:path*',
