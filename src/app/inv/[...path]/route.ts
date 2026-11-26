@@ -26,7 +26,17 @@ export async function GET(
 
   const ext = path.extname(rel).toLowerCase();
   const filename = parts[parts.length - 1];
-  const inline = ext === '.pdf' || ext === '.png' || ext === '.jpg' || ext === '.jpeg' || ext === '.svg' || ext === '.webp' || ext === '.json' || ext === '.html' || ext === '.htm';
+  const inline =
+    ext === '.pdf' ||
+    ext === '.png' ||
+    ext === '.jpg' ||
+    ext === '.jpeg' ||
+    ext === '.svg' ||
+    ext === '.webp' ||
+    ext === '.json' ||
+    ext === '.js' ||
+    ext === '.html' ||
+    ext === '.htm';
 
   return new NextResponse(buffer, {
     status: 200,
