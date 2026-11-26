@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Archivo, Literata } from 'next/font/google';
+import localFont from 'next/font/local';
 import { JsonLd } from '@/components/seo/JsonLd';
 import {
   DEFAULT_DESCRIPTION,
@@ -13,18 +13,18 @@ import {
 } from '@/lib/seo';
 import './globals.css';
 
-const archivo = Archivo({
-  subsets: ['latin'],
+const archivo = localFont({
+  src: '../fonts/archivo-latin-wght.woff2',
   variable: '--font-archivo',
   display: 'swap',
-  weight: ['400', '500', '600', '700', '800'],
+  weight: '400 800',
 });
 
-const literata = Literata({
-  subsets: ['latin'],
+const literata = localFont({
+  src: '../fonts/literata-latin-wght.woff2',
   variable: '--font-literata',
   display: 'swap',
-  weight: ['400', '500', '600', '700'],
+  weight: '400 700',
 });
 
 export const metadata: Metadata = {
