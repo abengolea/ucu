@@ -5,8 +5,10 @@ import { DenunciasStatsBanner } from '@/components/reclamos/DenunciasStatsBanner
 import { PresentarDenunciaCard } from '@/components/reclamos/PresentarDenunciaCard';
 import { CategorySidebar, HeroSection } from '@/components/SiteHeader';
 import { JsonLd } from '@/components/seo/JsonLd';
+import { InvestigacionesHomeBand } from '@/components/investigaciones/InvestigacionesIndex';
 import { SectionHeader, ServiceCard } from '@/components/ui/PageHeader';
 import { getCategories, getRecentPosts } from '@/lib/content';
+import { getPublishedInvestigaciones } from '@/lib/investigaciones';
 import {
   DEFAULT_DESCRIPTION,
   SITE_NAME,
@@ -38,9 +40,10 @@ export default async function HomePage() {
     );
   }
 
-  const [posts, categories] = await Promise.all([
+  const [posts, categories, investigaciones] = await Promise.all([
     getRecentPosts(12),
     getCategories(),
+    getPublishedInvestigaciones(3).catch(() => []),
   ]);
 
   return (
@@ -75,6 +78,8 @@ export default async function HomePage() {
           </div>
           <CategorySidebar categories={categories} />
         </section>
+
+        <InvestigacionesHomeBand items={investigaciones} />
 
         <section className="mt-16">
           <SectionHeader

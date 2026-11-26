@@ -110,6 +110,7 @@ export default async function FalloDetailPage({
           breadcrumbJsonLd([
             { name: 'Inicio', path: '/' },
             { name: 'Observatorio', path: '/observatorio' },
+            { name: 'Fallos de consumo', path: '/observatorio/fallos' },
             { name: shareTitle, path: `/observatorio/fallo/${id}` },
           ]),
         ]}

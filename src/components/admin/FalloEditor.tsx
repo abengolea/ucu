@@ -852,7 +852,7 @@ export function FalloEditor({
               : 'Guardar cambios'}
         </button>
         <Link
-          href={isPublic ? '/observatorio' : '/admin/fallos'}
+          href={isPublic ? '/observatorio/fallos' : '/admin/fallos'}
           className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white"
         >
           Cancelar

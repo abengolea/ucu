@@ -14,6 +14,20 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/observatorio/empresas',
+        destination: '/investigaciones',
+        permanent: false,
+      },
+      {
+        source: '/observatorio/empresas/:path*',
+        destination: '/investigaciones/:path*',
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

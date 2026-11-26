@@ -8,8 +8,17 @@ export function isAuthPath(pathname: string): boolean {
   return AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+export function isObservatorioHubPath(pathname: string): boolean {
+  return pathname === '/observatorio';
+}
+
+export function isObservatorioEmpresasPath(pathname: string): boolean {
+  return pathname === '/observatorio/empresas' || pathname.startsWith('/observatorio/empresas/');
+}
+
 export function isProtectedPagePath(pathname: string): boolean {
-  if (pathname === '/observatorio' || pathname.startsWith('/observatorio/')) return true;
+  if (isObservatorioHubPath(pathname) || isObservatorioEmpresasPath(pathname)) return false;
+  if (pathname.startsWith('/observatorio/')) return true;
   if (pathname === '/reclamos/estadisticas' || pathname.startsWith('/reclamos/estadisticas/')) {
     return true;
   }
@@ -52,7 +61,7 @@ export function authGateCopy(nextPath?: string | null): {
       eyebrow: 'Observatorio de fallos',
       title: 'Registrate para consultar la jurisprudencia',
       description:
-        'El Observatorio UCU reúne fallos de consumo con resumen, tribunal y demandado. Es gratuito: ingresá con Google o con email y contraseña.',
+        'El Observatorio de fallos reúne jurisprudencia de consumo con resumen, tribunal y demandado. Es gratuito: ingresá con Google o con email y contraseña.',
     };
   }
   if (next.startsWith('/reclamos/estadisticas') || next.startsWith('/empresas/')) {

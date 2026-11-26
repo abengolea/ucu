@@ -35,8 +35,8 @@ export default async function ObservatorioBuscarPage({
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <div className="mb-8">
-        <Link href="/observatorio" className="mb-4 inline-block text-sm text-[#1a5fb4] hover:underline">
-          ← Volver al observatorio
+        <Link href="/observatorio/fallos" className="mb-4 inline-block text-sm text-[#1a5fb4] hover:underline">
+          ← Fallos de consumo
         </Link>
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <Link

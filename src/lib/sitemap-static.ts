@@ -17,7 +17,9 @@ export const STATIC_SITEMAP_ROUTES: StaticSitemapRoute[] = [
   { path: '/reclamos/nuevo', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/reclamos/estadisticas', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/verificar', changeFrequency: 'monthly', priority: 0.6 },
-  { path: '/observatorio', changeFrequency: 'daily', priority: 0.9 },
+  { path: '/observatorio', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/observatorio/fallos', changeFrequency: 'daily', priority: 0.85 },
+  { path: '/investigaciones', changeFrequency: 'weekly', priority: 0.85 },
   { path: '/observatorio/buscar', changeFrequency: 'daily', priority: 0.8 },
   {
     path: '/planes-de-ahorro-son-una-trampa',
@@ -66,6 +68,9 @@ function inferSnapshotRoute(path: string): StaticSitemapRoute {
     return { path, changeFrequency: 'monthly', priority: 0.65 };
   }
   if (path.startsWith('/empresas/')) {
+    return { path, changeFrequency: 'weekly', priority: 0.7 };
+  }
+  if (path.startsWith('/investigaciones/')) {
     return { path, changeFrequency: 'weekly', priority: 0.7 };
   }
   if (path.startsWith('/paginas/')) {

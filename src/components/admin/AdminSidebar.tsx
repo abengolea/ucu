@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Plus,
   Search,
+  FileSearch,
   Users,
   ClipboardList,
   Tags,
@@ -56,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/admin', label: 'Notas', icon: LayoutDashboard, permission: 'posts:read', exact: true },
       { href: '/admin/posts/nueva', label: 'Nueva nota', icon: Plus, permission: 'posts:write', accent: 'green' },
+      { href: '/admin/investigaciones', label: 'Investigaciones', icon: FileSearch, permission: 'posts:read' },
       { href: '/admin/comentarios', label: 'Comentarios', icon: MessageSquare, permission: 'comments:read' },
     ],
   },

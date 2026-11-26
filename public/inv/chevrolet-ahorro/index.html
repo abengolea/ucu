@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2b2b2b">
+<title>Observatorio Chevrolet UCU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+/* VOICE informe de investigación de UCU: sobrio, contundente, con la identidad de ucu.org.ar
+   IDEA una página más del sitio de UCU: franja de cuatro colores, encabezado blanco con logo, portada oscura
+   PICTURE columnas por año de reclamos, devolución de dinero en magenta UCU, casos "por morosos" en amarillo
+   COLOUR azul #0066b3, magenta #e6007e, amarillo #fdb913, verde #8bc53f; carbón #2b2b2b; superficies frías
+   TYPE Archivo 800/700/600 para títulos e interfaz, Literata para bajadas y citas
+   LAYOUT encabezado con logo y navegación; portada carbón con cifras y gráfico; hallazgos en dos columnas; explorador; método; descargas; llamado en azul; pie carbón */
+:root{color-scheme:light dark;--bg:light-dark(oklch(98.5% .006 245),#1f1f1f);--raised:light-dark(#fff,#2b2b2b);--muted:light-dark(oklch(96% .008 245),#262626);--ink:light-dark(oklch(32% .012 245),#ececec);--mut:light-dark(oklch(52% .015 245),#b4b4b4);--line:light-dark(oklch(90% .01 245),#3d3d3d);--blue:#0066b3;--mag:#e6007e;--yel:#fdb913;--grn:#8bc53f;--char:#2b2b2b;--magt:light-dark(#fde3f1,#4a0f2c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip}
+a{color:inherit}
+.stripe{height:5px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--mag) 25% 50%,var(--yel) 50% 75%,var(--grn) 75%)}
+.band{padding-block:clamp(28px,4vw,64px);padding-left:max(5vw,16px);padding-right:max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.top{position:sticky;top:0;z-index:5;background:var(--raised);box-shadow:0 1px 0 var(--line)}
+header.top .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding:10px max(5vw,16px)}
+header.top .logo{display:flex;align-items:center;gap:14px;margin-right:auto;text-decoration:none}
+header.top .logo img{height:52px;width:auto}
+:root[data-theme=dark] header.top .logo .c{display:none}
+:root:not([data-theme=dark]) header.top .logo .w{display:none}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) header.top .logo .c{display:none}:root:not([data-theme=light]) header.top .logo .w{display:inline}}
+header.top .logo span{font-weight:700;font-size:14px;color:var(--mut);border-left:2px solid var(--line);padding-left:14px;line-height:1.2}
+header.top nav{display:flex;flex-wrap:wrap;gap:4px 20px}
+header.top nav a{text-decoration:none;font-size:13px;font-weight:600;text-transform:uppercase;padding:8px 0;border-bottom:2px solid transparent}
+header.top nav a:hover,header.top nav a:focus-visible{border-bottom-color:var(--mag)}
+.hero{background:var(--char);color:#fff;padding-top:clamp(24px,3.4vw,48px)}
+.eyebrow{color:var(--yel);font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px}
+h1{font-weight:800;font-size:clamp(34px,4.8vw,56px);line-height:1.04;letter-spacing:-.02em;margin:0 0 16px;max-width:19ch;text-wrap:balance}
+.lede{font:18px/1.6 Literata,Georgia,serif;max-width:64ch;margin:0 0 24px;color:rgba(255,255,255,.8)}
+.lead{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:center}
+.todo{background:#333;border-radius:8px;overflow:hidden;padding:0 22px 10px}
+.todo::before{content:"";display:block;height:4px;margin:0 -22px 18px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--mag) 25% 50%,var(--yel) 50% 75%,var(--grn) 75%)}
+.todo a{display:flex;justify-content:space-between;gap:12px;text-decoration:none;font-weight:600;font-size:15px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.todo a:last-child{border-bottom:0}
+.todo a span{color:rgba(255,255,255,.5)}
+.todo a:hover{text-decoration:underline}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(11em,1fr));border-top:1px solid rgba(255,255,255,.18);border-bottom:1px solid rgba(255,255,255,.18)}
+.figs div{padding:16px 16px 16px 0}
+.figs strong{display:block;font-weight:800;font-size:clamp(32px,4vw,46px);line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.figs span{display:block;font-size:14px;color:rgba(255,255,255,.75);margin-top:6px}
+.figs .hot strong{color:var(--mag)}
+.chartbox{margin-top:24px;background:#333;border-radius:8px;overflow:hidden;padding:0 16px 8px}
+.chartbox::before{content:"";display:block;height:4px;margin:0 -16px 14px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--mag) 25% 50%,var(--yel) 50% 75%,var(--grn) 75%)}
+.chartbox h2{font-size:18px;font-weight:700;margin:0 0 4px;color:#fff}
+.key{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:rgba(255,255,255,.75);margin-bottom:6px}
+.key i{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;border-radius:2px}
+.fig{position:relative;min-height:300px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+svg text{font-family:Archivo,system-ui,sans-serif}
+h2.sec{font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;letter-spacing:-.02em;margin:0 0 10px;text-wrap:balance}
+.sub{color:var(--mut);max-width:70ch;margin:0 0 22px}
+.two{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(20px,4vw,56px);align-items:start}
+@media(min-width:901px){.two>div:first-child{position:sticky;top:96px}}
+.rows .r{display:grid;grid-template-columns:minmax(0,1fr) 3.2em;gap:10px;align-items:center;padding:7px 0;border:0;border-bottom:1px solid var(--line);font-size:15px;cursor:pointer;background:none;width:100%;text-align:left;color:inherit;font-family:inherit}
+.rows .r:hover .lab,.rows .r:focus-visible .lab{text-decoration:underline}
+.rows .lab{display:block}
+.rows .bar{display:block;height:8px;background:var(--muted);margin-top:5px;border-radius:4px;overflow:hidden}
+.rows .bar i{display:block;height:100%;background:var(--blue)}
+.rows .r.top .bar i{background:var(--mag)}
+.rows .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.find{background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:14px}
+.find h3{font-size:20px;line-height:1.2;margin:0 0 8px;font-weight:700}
+.find p{margin:0 0 10px;max-width:68ch}
+blockquote{margin:10px 0 4px;padding:2px 0 2px 14px;border-left:3px solid var(--mag);font:italic 16px/1.6 Literata,Georgia,serif}
+blockquote cite{display:block;font:13px Archivo,system-ui,sans-serif;color:var(--mut);margin-top:4px}
+.pill{display:inline-block;background:var(--magt);padding:0 8px;border-radius:4px;font-weight:700}
+.explore{background:var(--muted)}
+.ctrl{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+label{display:block;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:3px}
+input,select,button{font:16px Archivo,system-ui,sans-serif;color:var(--ink)}
+input,select{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--raised)}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--yel);outline-offset:2px}
+.btn{min-height:44px;padding:10px 20px;border:1px solid var(--line);border-radius:6px;background:var(--raised);color:var(--ink);cursor:pointer;font-size:14px;font-weight:600}
+.btn.p{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin:8px 0 10px;font-size:15px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--raised);font-size:15px;border-radius:8px}
+th{text-align:left;font-weight:700;font-size:13px;color:var(--mut);padding:10px;border-bottom:2px solid var(--ink)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.row{cursor:pointer}
+tr.row:hover td{background:var(--muted)}
+tr.det td{background:var(--raised);padding:4px 10px 18px}
+.det .rel{font:italic 16px/1.6 Literata,Georgia,serif;max-width:80ch;white-space:pre-line;margin:4px 0 8px}
+.det .seg{font-size:14px;color:var(--mut);max-width:80ch}
+.tag{display:inline-block;font-size:13px;border:1px solid var(--line);border-radius:4px;padding:0 6px;margin:2px 4px 2px 0;white-space:nowrap}
+.res0{color:#3d7a12;font-weight:700}.res1{color:var(--mag);font-weight:700}
+:root[data-theme=dark] .res0{color:var(--grn)}
+.pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(16em,1fr));gap:18px 32px}
+.grid3 div{border-top:3px solid var(--blue);padding-top:10px}
+.grid3 div:nth-child(4n+2){border-color:var(--mag)}.grid3 div:nth-child(4n+3){border-color:var(--yel)}.grid3 div:nth-child(4n+4){border-color:var(--grn)}
+.grid3 h3{font-size:17px;margin:0 0 4px}
+.grid3 p{margin:0;color:var(--mut);font-size:15px}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(15em,1fr));gap:14px}
+.dl .card{border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:8px;background:var(--raised)}
+.dl .card h3{font-size:17px;margin:0}
+.dl .card p{margin:0;color:var(--mut);font-size:14px;flex:1}
+.dl .fmt{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--blue)}
+.dl .card a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+[hidden]{display:none!important}
+.cta{background:var(--blue);color:#fff}
+.cta p{max-width:66ch;font:17px/1.6 Literata,Georgia,serif}
+.cta p.note{font:14px/1.5 Archivo,system-ui,sans-serif;color:rgba(255,255,255,.85)}
+.cta a.btn{font:600 14px Archivo,system-ui,sans-serif;background:#fff;border-color:#fff;color:var(--blue);display:inline-flex;align-items:center;text-decoration:none}
+footer{background:var(--char);color:rgba(255,255,255,.8);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center}
+footer img{height:56px;width:auto}
+#msg{font-size:14px;color:var(--mut);min-height:1.5em}
+@media(max-width:900px){.lead{grid-template-columns:minmax(0,1fr)}.todo{display:none}.two{grid-template-columns:minmax(0,1fr)}.ctrl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ctrl .q{grid-column:1/-1}header.top .logo span{display:none}}
+@media(max-width:600px){header.top nav{width:100%;gap:2px 14px}header.top nav a{font-size:12px}header.top .logo img{height:42px}.figs{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.figs div{padding:10px 10px 10px 0}.figs strong{font-size:30px}.figs span{font-size:13px}.lede{font-size:16px}table{font-size:14px}.stack thead{display:none}.stack tr.row{display:grid;padding-block:8px;border-bottom:1px solid var(--line)}.stack tr.row td{display:block;border:0;padding:2px 4px}.stack tr.row td.c3{font-size:13px;color:var(--mut)}.fig{min-height:260px}}
+@media(prefers-reduced-motion:no-preference){.rows .bar i{transition:width .5s ease}}
+</style>
+</head>
+<body>
+<header class="top"><div class="stripe"></div><div class="bar"><a class="logo" href="https://ucu.org.ar"><img class="c" src="/inv/chevrolet-ahorro/logo-ucu.png" alt="Usuarios y Consumidores Unidos" width="236" height="111"><img class="w" src="/inv/chevrolet-ahorro/logo-ucu-white.png" alt="" width="236" height="111"><span>Observatorio<br>Chevrolet</span></a><nav><a href="#hallazgos">Hallazgos</a><a href="#explorador">Explorador</a><a href="#metodo">Método</a><a href="#descargas">Descargas</a><a href="#ayuda">¿Te pasó?</a></nav></div></header>
+
+<section class="hero band"><div class="wrap">
+<div class="lead"><div><p class="eyebrow">Observatorio de reclamos · Chevrolet S.A. de Ahorro</p>
+<h1>El ahorro entra puntual. Volver, vuelve cuando quiere la administradora.</h1>
+<p class="lede">Leímos los 1.016 reclamos contra Chevrolet publicados en tuQuejaSuma y separamos los 712 de planes de ahorro. El primer motivo de queja no es el auto: es la plata que el ahorrista ya puso y no le devuelven.</p>
+</div>
+<aside class="todo"><p class="eyebrow" style="color:var(--grn)">¿Qué encontrás acá?</p>
+<a href="#hallazgos" style="color:var(--grn)">Los hallazgos, con citas<span>→</span></a>
+<a href="#explorador" style="color:var(--yel)">Los 712 reclamos, uno por uno<span>→</span></a>
+<a href="#descargas" style="color:#ff4fae">Informe jurídico y bases<span>→</span></a>
+<a href="#ayuda" style="color:#5fb0ec">¿Te pasó algo parecido?<span>→</span></a></aside></div>
+<div class="figs" id="figs"></div>
+<div class="chartbox">
+<h2>Reclamos de planes de ahorro por año de publicación</h2>
+<div class="key"><span><i style="background:#e6007e"></i>Tema principal: devolución de dinero</span><span><i style="background:#4f9fdc"></i>Otros temas</span><span><i style="background:#fdb913;border-radius:50%"></i>Pago retenido o parcial “por morosos”</span></div>
+<div class="fig"><svg id="chart" role="img" aria-label="Reclamos por año, con la porción de devolución de dinero"></svg></div>
+</div>
+</div></section>
+
+<section class="band" id="hallazgos"><div class="wrap">
+<h2 class="sec">Qué aparece cuando se leen todos juntos</h2>
+<p class="sub">Clasificación multietiqueta: un reclamo puede tener varios temas. Tocá una categoría para verla en el explorador.</p>
+<div class="two">
+<div><div class="rows" id="cats"></div><p class="sub" style="margin-top:14px;font-size:14px">Cada publicación es la palabra de su autor, no un hecho comprobado judicialmente. Las citas se transcriben en cursiva y con su ortografía original.</p></div>
+<div>
+<div class="find"><h3>El dinero que no vuelve es el centro del problema</h3>
+<p><span class="pill" data-k="haber_principal"></span> de los reclamos tienen como tema principal la devolución de dinero: haber neto de grupos cerrados, saldos a favor, cuotas de planes renunciados. Entre 2021 y 2023 se concentran los que mencionan una carta de la empresa anunciando un saldo a favor que después no se paga.</p>
+<blockquote>este saldo fue reclamado infinidad de veces desde esa fecha hasta que dejé de reclamarlo por cansancio.<cite>Reclamo 2289852 · 16/06/2022</cite></blockquote></div>
+<div class="find"><h3>“Hasta que paguen los morosos”</h3>
+<p>Desde 2024 la administradora paga una parte del haber neto y condiciona el resto al cobro de lo que deben otros integrantes del grupo. En 2026, <span class="pill" data-k="morosos_2026"></span> de los reclamos del año describen esa práctica. Ninguno figura como solucionado.</p>
+<blockquote>me pagaron sólo el 30% […] dicen que hay gente del grupo que retiraron el vehículo y deben cuotas y que hasta que ellos no abonen, no nos pueden reintegrar ese dinero.<cite>Reclamo 3229229 · 27/05/2025</cite></blockquote></div>
+<div class="find"><h3>Deudas que aparecen después de pagar</h3>
+<p>Planes cancelados que vuelven como deuda, a veces años después, gestionados por estudios de cobranza que no informan origen ni monto. En algún caso, la deuda desaparece cuando el ahorrista menciona Defensa del Consumidor.</p></div>
+<div class="find"><h3>Silencio</h3>
+<p>Chevrolet S.A. de Ahorro no tiene ninguna respuesta verificada en el portal. Solo <span class="pill" data-k="sol"></span> de los reclamos termina solucionado según su autor. Ese vacío lo ocupan cuentas que se presentan como “soporte” y piden teléfono y correo.</p></div>
+</div></div>
+</div></section>
+
+<section class="band explore" id="explorador"><div class="wrap">
+<h2 class="sec">Explorador de reclamos</h2>
+<p class="sub">Los 712 reclamos, con nombres, correos, documentos y teléfonos omitidos. Tocá una fila para leer el relato completo y abrir la fuente.</p>
+<div class="ctrl">
+<div class="q"><label for="q">Buscar en título, relato y seguimiento</label><input id="q" type="search" placeholder="Ej.: morosos, prenda, haber neto"></div>
+<div><label for="fy">Año</label><select id="fy"></select></div>
+<div><label for="fc">Tema</label><select id="fc"></select></div>
+<div><label for="fr">Resultado</label><select id="fr"><option value="">Todos</option><option value="0">Solucionado</option><option value="1">Solución rechazada</option><option value="2">Sin cierre informado</option></select></div>
+<div><label for="fi">Indicador</label><select id="fi"></select></div>
+</div>
+<div class="meta"><span id="cnt" aria-live="polite"></span><span class="pager"><button class="btn" id="clr" type="button">Limpiar filtros</button><button class="btn" id="prev" type="button">Anterior</button><span id="pg"></span><button class="btn" id="next" type="button">Siguiente</button></span></div>
+<div class="scroll"><table class="stack"><thead><tr><th>Fecha</th><th>Reclamo</th><th>Tema principal</th><th>Resultado</th></tr></thead><tbody id="tb"><tr><td colspan="4">Cargando la base…</td></tr></tbody></table></div>
+</div></section>
+
+<section class="band" id="metodo"><div class="wrap">
+<h2 class="sec">Una base verificable, no una muestra</h2>
+<p class="sub">Relevamiento exhaustivo del 25 y 26 de noviembre de 2026, con pausas entre pedidos para no cargar el sitio. El sitio no se actualiza solo.</p>
+<div class="grid3">
+<div><h3>Cobertura</h3><p>101 de 101 páginas de listado y 1.016 de 1.016 fichas leídas, sin errores de lectura. Primer reclamo del universo: 13/02/2014. Último: 15/11/2026.</p></div>
+<div><h3>Universo</h3><p>712 reclamos de planes de ahorro: 667 con mención expresa (plan, cuotas, adjudicación, haber neto) y 45 pedidos de cobro sin mención del plan ni señales de otra relación. Quedaron fuera 304 sobre service, garantía, repuestos, compras convencionales u otras marcas.</p></div>
+<div><h3>Clasificación</h3><p>Palabras clave sobre título, relato y comentarios del propio autor, con revisión manual de los casos dudosos. Sirve para encontrar patrones, no califica jurídicamente cada caso.</p></div>
+<div><h3>Resultado</h3><p>“Solucionado” es lo que el autor marcó en el portal. “Solución rechazada”: el autor dejó constancia de que seguía sin solución. La empresa no tiene cuenta verificada que responda.</p></div>
+<div><h3>Datos personales</h3><p>Se omitieron en forma automática nombres de personas, correos, documentos y teléfonos. Los montos figuran como [números] porque así los oculta el portal.</p></div>
+<div><h3>Duplicados</h3><p>Solo se eliminaron URLs idénticas. Un mismo autor puede haber publicado dos veces el mismo reclamo con direcciones distintas.</p></div>
+</div>
+</div></section>
+
+<section class="band explore" id="descargas"><div class="wrap">
+<h2 class="sec">Descargar la investigación</h2>
+<p class="sub" id="msg"></p>
+<div class="dl" id="dl"></div>
+</div></section>
+
+<section class="band cta" id="ayuda"><div class="wrap">
+<h2 class="sec">¿Te pasó algo parecido?</h2>
+<p>Si tu grupo cerró y no te devolvieron el haber neto, si te pagaron una parte “hasta que paguen los morosos” o si te reclaman una deuda después de cancelar el plan, no es un caso aislado. UCU promueve una acción colectiva contra Chevrolet S.A. de Ahorro por la liquidación del haber neto y los recuperos de morosos. Escribile a UCU por sus canales oficiales y guardá tus comprobantes, cartas y respuestas de la empresa.</p>
+<p><a class="btn" href="/reclamos/nuevo">Hacé tu denuncia en UCU</a></p>
+<p class="note">No compartas tu teléfono ni tu correo en los comentarios de sitios de reclamos: cuentas que se hacen pasar por “soporte” los piden.</p>
+</div></section>
+
+<footer class="band"><div class="wrap"><img src="/inv/chevrolet-ahorro/logo-ucu-white.png" alt="Usuarios y Consumidores Unidos" width="236" height="111"><span>Observatorio UCU · Usuarios y Consumidores Unidos · Investigación y defensa colectiva. Fuente: tuquejasuma.com/chevrolet. Corte de datos: 25/11/2026.</span></div></footer>
+
+<script>
+{
+const CAT={haber_neto:'Devolución de dinero: haber neto, saldo a favor, reintegros',renuncia_rescision:'Renuncia, rescisión o baja del plan',demora_entrega:'Demora o falta de entrega',aumento_cuotas:'Aumento de cuotas',cobros_indebidos:'Cobros indebidos y doble débito',deuda_intimacion:'Deudas reclamadas e intimaciones',prenda:'Prenda y libre deuda',engano_venta:'Engaño en la venta',fraude_terceros:'Fraude o suplantación por terceros',adjudicacion:'Sorteo, licitación y adjudicación',cambio_modelo:'Cambio de modelo',atencion:'Falta de respuesta',facturacion_web:'Cupones, facturas y web',otros:'Otros'};
+const IND={carta_cierre_grupo:'Carta de cierre de grupo o saldo a favor',igj_fondo_multas:'Fondo de multas (IGJ)',recupero_morosos:'Pago retenido o parcial por morosos',haber_desactualizado:'Devolución sin actualizar',estudio_cobranza:'Estudio de cobranza',cautelar:'Medida cautelar',cuotas_post_cierre:'Cobros después de terminar el plan',entrega_50_dias:'Plazo de entrega de 50 días',falta_respuesta:'Falta de respuesta'};
+const RES=['Solucionado','Solución rechazada','Sin cierre informado'];
+const FILES=[['01-informe-juridico-chevrolet.pdf','Informe jurídico','Hallazgos y encuadre en la Ley 24.240 y el Código Civil y Comercial.','/inv/chevrolet-ahorro/descargas/01-informe-juridico-chevrolet.pdf','PDF'],['02-base-completa-chevrolet.xlsx','Base completa','Una fila por reclamo, con categorías, indicadores y resumen con fórmulas.','/inv/chevrolet-ahorro/descargas/02-base-completa-chevrolet.xlsx','Excel'],['03-base-abierta-chevrolet.csv','Base abierta','Los mismos datos en formato abierto, UTF-8.','/inv/chevrolet-ahorro/descargas/03-base-abierta-chevrolet.csv','CSV'],['04-anexo-de-evidencia-chevrolet.pdf','Anexo de evidencia','40 reclamos seleccionados por patrón, con extracto y enlace a la fuente.','/inv/chevrolet-ahorro/descargas/04-anexo-de-evidencia-chevrolet.pdf','PDF'],['05-control-de-extraccion-chevrolet.xlsx','Control de extracción','Páginas, fichas leídas, inclusiones y exclusiones con su motivo.','/inv/chevrolet-ahorro/descargas/05-control-de-extraccion-chevrolet.xlsx','Excel']];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n.toLocaleString('es-AR');
+const pct=(a,b)=>(100*a/b).toFixed(1).replace('.',',')+' %';
+const $=id=>document.getElementById(id);
+let D=[],F=[],page=0,open=null;const PER=25;
+const dmy=f=>f.split('-').reverse().join('/');
+
+// descargas: siempre visibles; se guardan con la capacidad de descargas o se abren por enlace
+const ext=f=>f.split('.').pop().toUpperCase();
+$('dl').innerHTML=FILES.map(f=>`<div class="card"><span class="fmt">${ext(f[0])}${f[4]&&f[4]!==ext(f[0])?' · '+f[4]:''}</span><h3>${esc(f[1])}</h3><p>${esc(f[2])}</p><button class="btn p sv" type="button" data-f="${f[0]}" hidden>Descargar ${ext(f[0])}</button>${f[3]?`<a class="btn" href="${f[3]}">Abrir ${f[4]}</a>`:''}</div>`).join('');
+$('msg').textContent='Informe, bases y anexos se abren desde esta misma página de UCU.';
+
+function figures(){
+ const n=D.length,hp=D.filter(r=>r.c==='haber_neto').length,sol=D.filter(r=>r.res===0).length,y26=D.filter(r=>r.f.startsWith('2026')),m26=y26.filter(r=>r.i.includes('recupero_morosos')).length;
+ $('figs').innerHTML=[[fmt(n),'reclamos de planes de ahorro'],[pct(hp,n),'tienen como tema principal la devolución de dinero',1],[pct(sol,n),'terminan solucionados según su autor'],['0','respuestas verificadas de la empresa']].map(x=>`<div class="${x[2]?'hot':''}"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('');
+ const K={haber_principal:pct(hp,n),morosos_2026:`${m26} de ${y26.length}`,sol:pct(sol,n)};
+ document.querySelectorAll('.pill[data-k]').forEach(p=>p.textContent=K[p.dataset.k]);
+ const cnt={};D.forEach(r=>r.cs.forEach(c=>cnt[c]=(cnt[c]||0)+1));
+ const arr=Object.entries(cnt).sort((a,b)=>b[1]-a[1]),mx=arr[0][1];
+ $('cats').innerHTML=arr.map(([k,v],i)=>`<button class="r ${i===0?'top':''}" type="button" data-c="${k}"><span><span class="lab">${esc(CAT[k])}</span><span class="bar"><i style="width:${(100*v/mx).toFixed(1)}%"></i></span></span><span class="n">${v}</span></button>`).join('');
+}
+$('cats').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;$('fc').value=b.dataset.c;apply();location.hash='explorador';});
+
+const svg=$('chart');
+function draw(){
+ if(!D.length)return;const W=svg.clientWidth,H=svg.clientHeight;
+ const ys=[];for(let y=2014;y<=2026;y++)ys.push(String(y));
+ const tot=ys.map(y=>D.filter(r=>r.f.startsWith(y)));
+ const mx=Math.max(...tot.map(t=>t.length));const top=mx>100?Math.ceil(mx/50)*50:Math.ceil(mx/10)*10;
+ const L=34,R=8,T=22,B=26,cw=(W-L-R)/ys.length,bw=Math.min(cw*.62,46),sc=v=>(H-T-B)*v/top;
+ let s='';const tks=W<520?[0,top]:[0,top/2,top];
+ tks.forEach(v=>{const y=H-B-sc(v);s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="rgba(255,255,255,.14)"/><text x="${L-6}" y="${y+4}" text-anchor="end" font-size="13" fill="rgba(255,255,255,.7)">${v}</text>`});
+ tot.forEach((t,i)=>{const x=L+i*cw+(cw-bw)/2,h=sc(t.length),hp=sc(t.filter(r=>r.c==='haber_neto').length),mo=t.filter(r=>r.i.includes('recupero_morosos')).length;
+  s+=`<rect x="${x}" y="${H-B-h}" width="${bw}" height="${h-hp}" fill="#4f9fdc"/><rect x="${x}" y="${H-B-hp}" width="${bw}" height="${hp}" fill="#e6007e"/>`;
+  if(t.length&&(W>=520||i%2===0||i===ys.length-1))s+=`<text x="${x+bw/2}" y="${H-B-h-6}" text-anchor="middle" font-size="13" fill="#fff">${t.length}</text>`;
+  for(let k=0;k<mo;k++)s+=`<circle cx="${x+bw/2}" cy="${H-B-h-22-k*11}" r="4" fill="#fdb913"/>`;
+  const lab=W<520?"'"+ys[i].slice(2):ys[i];if(W>=420||i%2===0)s+=`<text x="${x+bw/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.7)">${lab}</text>`;});
+ svg.innerHTML=s;
+}
+const ro=new ResizeObserver(draw);ro.observe(svg);
+
+function fill(){
+ const ys=[...new Set(D.map(r=>r.f.slice(0,4)))].sort().reverse();
+ $('fy').innerHTML='<option value="">Todos</option>'+ys.map(y=>`<option>${y}</option>`).join('');
+ $('fc').innerHTML='<option value="">Todos</option>'+Object.keys(CAT).map(k=>`<option value="${k}">${esc(CAT[k])}</option>`).join('');
+ $('fi').innerHTML='<option value="">Todos</option>'+Object.keys(IND).map(k=>`<option value="${k}">${esc(IND[k])}</option>`).join('');
+}
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function apply(){
+ const q=norm($('q').value.trim()),y=$('fy').value,c=$('fc').value,rs=$('fr').value,ind=$('fi').value;
+ F=D.filter(r=>(!y||r.f.startsWith(y))&&(!c||r.cs.includes(c)||(c==='otros'&&r.c==='otros'))&&(rs===''||r.res===+rs)&&(!ind||r.i.includes(ind))&&(!q||r._n.includes(q)));
+ page=0;open=null;render();
+}
+function render(){
+ const pages=Math.max(1,Math.ceil(F.length/PER));page=Math.min(page,pages-1);
+ $('cnt').textContent=`${fmt(F.length)} de ${fmt(D.length)} reclamos`;$('pg').textContent=`${page+1} / ${pages}`;
+ $('prev').disabled=page===0;$('next').disabled=page>=pages-1;
+ const rows=F.slice(page*PER,page*PER+PER);
+ if(!rows.length){$('tb').innerHTML='<tr><td colspan="4">Ningún reclamo coincide con estos filtros.</td></tr>';return}
+ $('tb').innerHTML=rows.map(r=>{const o=open===r.id;let h=`<tr class="row" tabindex="0" data-id="${esc(r.id)}" aria-expanded="${o}"><td class="d">${dmy(r.f)}</td><td><b>${esc(r.t)}</b></td><td class="c3">${esc(CAT[r.c])}</td><td class="res${r.res}">${RES[r.res]}</td></tr>`;
+  if(o)h+=`<tr class="det"><td colspan="4"><div class="rel">${esc(r.r)}</div>${r.s?`<div class="seg"><b>Seguimiento del autor:</b> ${esc(r.s.replace(/ \|\| /g,' · '))}</div>`:''}<div style="margin:8px 0">${r.cs.map(k=>`<span class="tag">${esc(CAT[k])}</span>`).join('')}${r.i.map(k=>`<span class="tag" style="border-color:#e6007e">${esc(IND[k])}</span>`).join('')}</div><a href="${esc(r.u)}">Ver la ficha original (reclamo ${esc(r.id)})</a></td></tr>`;return h}).join('');
+}
+$('tb').addEventListener('click',e=>{if(e.target.closest('a'))return;const tr=e.target.closest('tr.row');if(!tr)return;open=open===tr.dataset.id?null:tr.dataset.id;render()});
+$('tb').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const tr=e.target.closest('tr.row');if(!tr)return;e.preventDefault();open=open===tr.dataset.id?null:tr.dataset.id;render()});
+['fy','fc','fr','fi'].forEach(id=>$(id).addEventListener('change',apply));
+let tq;$('q').addEventListener('input',()=>{clearTimeout(tq);tq=setTimeout(apply,200)});
+$('prev').addEventListener('click',()=>{page--;open=null;render()});
+$('next').addEventListener('click',()=>{page++;open=null;render()});
+$('clr').addEventListener('click',()=>{['q','fy','fc','fr','fi'].forEach(id=>$(id).value='');apply()});
+
+fetch('/inv/chevrolet-ahorro/datos/reclamos.json').then(r=>r.json()).then(d=>{D=d.map(r=>Object.assign(r,{_n:norm(r.t+' '+r.r+' '+r.s)}));F=D;fill();figures();draw();render();})
+ .catch(()=>{$('tb').innerHTML='<tr><td colspan="4">No se pudo cargar la base. Recargá la página.</td></tr>'});
+}
+</script>
+</body>
+</html>

@@ -13,13 +13,16 @@ export const GEO_PLAN_AHORRO =
   'Un plan de ahorro automotor no es un crédito: es un sistema de capitalización en grupo donde la cuota se mueve con el precio del auto y las reglas de la administradora.';
 
 export const GEO_OBSERVATORIO =
-  'El Observatorio UCU es una base de fallos judiciales sobre defensa del consumidor en Argentina, con resumen, tribunal, rubro y demandado. Se consulta con registro gratuito (Google o email).';
+  'El Observatorio UCU tiene dos puertas: fallos de consumo (jurisprudencia argentina, con registro gratuito) y empresas (páginas interactivas armadas por miembros con asistencia de IA, de lectura libre).';
 
 export const GEO_ESTADISTICAS =
   'UCU publica el total de denuncias de consumo recibidas contra cada empresa. La consulta es gratuita con registro; el desglose por causas sale en un PDF certificable.';
 
 export const GEO_EDUCACION =
   'Educación financiera de UCU es un curso gratuito para consumidores argentinos: presupuesto, crédito, tasas y sobreendeudamiento, con calculadoras y fuentes oficiales (BCRA, CNV).';
+
+export const GEO_INVESTIGACIONES =
+  'El Observatorio de empresas de UCU publica páginas interactivas sobre compañías, armadas por miembros con asistencia de inteligencia artificial. Se leen en ucu.org.ar; no reemplazan una denuncia ni un dictamen jurídico.';
 
 export const GEO_COBRANZAS =
   'Un estudio de cobranzas puede intimar una deuda cierta y exigir pago, pero no puede amenazar, hostigar, informar datos falsos ni afectar tu honor: la Ley 24.240 y normas de BCRA limitan esas prácticas.';
@@ -52,7 +55,7 @@ export const GEO_FAQ_ITEMS: GeoFaqItem[] = [
     href: '/categoria/alertas-de-fraude',
   },
   {
-    question: '¿Qué es el Observatorio de fallos UCU?',
+    question: '¿Qué es el Observatorio UCU?',
     answer: GEO_OBSERVATORIO,
     href: '/observatorio',
   },
@@ -60,5 +63,10 @@ export const GEO_FAQ_ITEMS: GeoFaqItem[] = [
     question: '¿UCU publica denuncias por empresa?',
     answer: GEO_ESTADISTICAS,
     href: '/reclamos/estadisticas',
+  },
+  {
+    question: '¿Qué es el Observatorio de empresas de UCU?',
+    answer: GEO_INVESTIGACIONES,
+    href: '/investigaciones',
   },
 ];

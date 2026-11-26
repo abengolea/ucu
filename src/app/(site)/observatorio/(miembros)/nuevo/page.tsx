@@ -14,10 +14,10 @@ export default function ObservatorioNuevoFalloPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 lg:px-6">
       <Link
-        href="/observatorio"
+        href="/observatorio/fallos"
         className="mb-6 inline-block font-display text-sm font-semibold text-ucu-blue transition hover:text-ucu-magenta"
       >
-        ← Volver al observatorio
+        ← Fallos de consumo
       </Link>
 
       <div className="mb-8">

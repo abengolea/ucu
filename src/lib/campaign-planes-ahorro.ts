@@ -36,8 +36,8 @@ export const campaignActions = [
     title: 'Fallos relevantes',
     description:
       'Los fallos más importantes en materia de planes de ahorro, disponibles en nuestro observatorio.',
-    href: '/observatorio',
-    cta: 'Ir al observatorio',
+    href: '/observatorio/fallos',
+    cta: 'Ir a los fallos',
   },
   {
     title: 'Curso online para abogados',

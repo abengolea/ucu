@@ -12,18 +12,31 @@ import { MEMBER_LOGIN_PATH } from '@/lib/member-paths';
 import { cn } from '@/lib/utils';
 import type { MemberViewer } from '@/types/members';
 
-const mainNav = [
+const mainNav: { href: string; label: string; match?: string[] }[] = [
   { href: '/', label: 'Inicio' },
   { href: '/planes-de-ahorro-son-una-trampa', label: 'Campaña' },
   { href: '/posts', label: 'Noticias' },
   { href: '/educacion-financiera', label: 'Educación financiera' },
   { href: '/reclamos', label: 'Hacé tu denuncia' },
-  { href: '/observatorio', label: 'Observatorio' },
+  { href: '/observatorio', label: 'Observatorio', match: ['/observatorio', '/investigaciones'] },
 ];
 
-function NavLink({ href, label, onClick }: { href: string; label: string; onClick?: () => void }) {
+function NavLink({
+  href,
+  label,
+  match,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  match?: string[];
+  onClick?: () => void;
+}) {
   const pathname = usePathname();
-  const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+  const prefixes = match ?? [href];
+  const active = prefixes.some((prefix) =>
+    prefix === '/' ? pathname === '/' : pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
 
   return (
     <Link
@@ -85,7 +98,7 @@ export function SiteHeader({ viewer = null }: { viewer?: Pick<MemberViewer, 'nam
           id="mobile-nav"
           className={cn(
             'overflow-hidden border-t border-[var(--border)] bg-[var(--surface-raised)] transition-[max-height] duration-300 ease-out md:hidden',
-            open ? 'max-h-[36rem]' : 'max-h-0',
+            open ? 'max-h-[42rem]' : 'max-h-0',
           )}
           aria-label="Principal móvil"
         >
@@ -331,7 +344,7 @@ export function HeroSection() {
                   { label: 'Estadísticas por empresa', href: '/reclamos/estadisticas', color: 'text-ucu-yellow' },
                   { label: 'Alertas de fraude', href: '/categoria/alertas-de-fraude', color: 'text-ucu-magenta' },
                   { label: 'Planes de ahorro', href: '/planes-de-ahorro-son-una-trampa', color: 'text-ucu-blue' },
-                  { label: 'Observatorio de fallos', href: '/observatorio', color: 'text-ucu-yellow' },
+                  { label: 'Observatorio', href: '/observatorio', color: 'text-ucu-yellow' },
                 ].map((item) => (
                   <li key={item.href}>
                     <Link
