@@ -73,6 +73,7 @@ export const config = {
     '/observatorio/:path*',
     '/investigaciones',
     '/investigaciones/:path*',
+    '/inv/:path*',
     '/reclamos/estadisticas',
     '/reclamos/estadisticas/:path*',
     '/empresas/:path*',

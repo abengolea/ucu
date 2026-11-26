@@ -20,6 +20,7 @@ export function isProtectedPagePath(pathname: string): boolean {
   if (isObservatorioHubPath(pathname) || isObservatorioEmpresasPath(pathname)) return false;
   if (pathname.startsWith('/observatorio/')) return true;
   if (pathname === '/investigaciones' || pathname.startsWith('/investigaciones/')) return true;
+  if (pathname === '/inv' || pathname.startsWith('/inv/')) return true;
   if (pathname === '/reclamos/estadisticas' || pathname.startsWith('/reclamos/estadisticas/')) {
     return true;
   }
@@ -57,7 +58,7 @@ export function authGateCopy(nextPath?: string | null): {
   description: string;
 } {
   const next = safeNextPath(nextPath);
-  if (next.startsWith('/investigaciones')) {
+  if (next.startsWith('/investigaciones') || next.startsWith('/inv/')) {
     return {
       eyebrow: 'Observatorio de empresas',
       title: 'Registrate para consultar los análisis de empresas',

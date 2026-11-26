@@ -116,8 +116,16 @@ export async function loadInvestigacionHtml(
   return buffer.toString('utf8');
 }
 
+/** Los enlaces de descarga del artefacto deben salir del iframe. */
+export function openInvestigacionDownloadsExternally(html: string): string {
+  return html.replaceAll(
+    '`<a class="btn" href="${f[3]}">Abrir ${f[4]}</a>`',
+    '`<a class="btn" href="${f[3]}" target="_blank" rel="noopener">Abrir ${f[4]}</a>`'
+  );
+}
+
 export function wrapInvestigacionHtml(html: string, title: string): string {
-  const trimmed = html.trim();
+  const trimmed = openInvestigacionDownloadsExternally(html.trim());
   if (!trimmed) {
     return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body></body></html>`;
   }

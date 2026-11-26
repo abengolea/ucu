@@ -221,7 +221,7 @@ const dmy=f=>f.split('-').reverse().join('/');
 
 // descargas: siempre visibles; se guardan con la capacidad de descargas o se abren por enlace
 const ext=f=>f.split('.').pop().toUpperCase();
-$('dl').innerHTML=FILES.map(f=>`<div class="card"><span class="fmt">${ext(f[0])}${f[4]&&f[4]!==ext(f[0])?' · '+f[4]:''}</span><h3>${esc(f[1])}</h3><p>${esc(f[2])}</p><button class="btn p sv" type="button" data-f="${f[0]}" hidden>Descargar ${ext(f[0])}</button>${f[3]?`<a class="btn" href="${f[3]}">Abrir ${f[4]}</a>`:''}</div>`).join('');
+$('dl').innerHTML=FILES.map(f=>`<div class="card"><span class="fmt">${ext(f[0])}${f[4]&&f[4]!==ext(f[0])?' · '+f[4]:''}</span><h3>${esc(f[1])}</h3><p>${esc(f[2])}</p><button class="btn p sv" type="button" data-f="${f[0]}" hidden>Descargar ${ext(f[0])}</button>${f[3]?`<a class="btn" href="${f[3]}" target="_blank" rel="noopener">Abrir ${f[4]}</a>`:''}</div>`).join('');
 $('msg').textContent='Informe, bases y anexos se abren desde esta misma página de UCU.';
 
 function figures(){
