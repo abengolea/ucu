@@ -265,8 +265,6 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
                   title,
                   excerpt,
                   empresaNombre,
-                  memberName,
-                  aiName,
                   publishedAt: toPreviewIso(publishedAt),
                   ctaLabel,
                 }}

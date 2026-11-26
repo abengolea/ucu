@@ -38,7 +38,7 @@ export function InvestigacionRow({
 }: {
   item: Pick<
     InvestigacionListItem,
-    'slug' | 'title' | 'excerpt' | 'empresaNombre' | 'memberName' | 'aiName' | 'publishedAt' | 'ctaLabel'
+    'slug' | 'title' | 'excerpt' | 'empresaNombre' | 'publishedAt' | 'ctaLabel'
   >;
   preview?: boolean;
 }) {
@@ -73,11 +73,6 @@ export function InvestigacionRow({
       {item.excerpt ? (
         <p className="mt-2 max-w-prose font-serif text-sm leading-relaxed text-[var(--ink-muted)] md:text-base">
           {item.excerpt}
-        </p>
-      ) : null}
-      {item.memberName || item.aiName ? (
-        <p className="mt-3 font-display text-xs text-[var(--ink-faint)]">
-          {[item.memberName, item.aiName].filter(Boolean).join(' · ')}
         </p>
       ) : null}
       {preview ? (

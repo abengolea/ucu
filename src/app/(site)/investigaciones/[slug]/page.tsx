@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { InvestigacionFrame } from '@/components/investigaciones/InvestigacionFrame';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { getInvestigacionBySlug } from '@/lib/investigaciones';
@@ -28,17 +26,16 @@ export async function generateMetadata({
     title: item.title,
     description: excerptToDescription(
       item.excerpt,
-      `Investigación UCU sobre ${item.empresaNombre}, asistida por ${item.aiName}.`
+      `Investigación UCU sobre ${item.empresaNombre}.`
     ),
     path: `/investigaciones/${item.slug}`,
     type: 'article',
     publishedTime: item.publishedAt,
     modifiedTime: item.modifiedAt,
-    authors: [item.memberName],
+    authors: ['Usuarios y Consumidores Unidos'],
     keywords: [
       item.empresaNombre,
       'investigación UCU',
-      item.aiName,
       'defensa del consumidor',
     ],
   });
@@ -69,9 +66,9 @@ export default async function InvestigacionPage({
             path,
             publishedAt: item.publishedAt,
             modifiedAt: item.modifiedAt,
-            authorName: item.memberName,
+            authorName: 'Usuarios y Consumidores Unidos',
             section: 'Observatorio de empresas',
-            tags: [item.empresaNombre, item.aiName],
+            tags: [item.empresaNombre],
           }),
           breadcrumbJsonLd([
             { name: 'Inicio', path: '/' },
@@ -88,14 +85,6 @@ export default async function InvestigacionPage({
             ← Empresas
           </Link>
           <h1 className="sr-only">{item.title}</h1>
-          <p className="font-display text-xs text-[var(--ink-muted)]">
-            {item.memberName} · {item.aiName} ·{' '}
-            <time dateTime={item.publishedAt}>
-              {format(new Date(item.publishedAt), "d MMM yyyy", { locale: es })}
-            </time>
-            {' · '}
-            investigación asistida por IA, no es un dictamen jurídico
-          </p>
           {item.empresaId ? (
             <Link
               href={`/empresas/${item.empresaId}`}
