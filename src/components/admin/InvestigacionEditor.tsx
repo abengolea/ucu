@@ -392,8 +392,9 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
           <div>
             <label className="mb-1 block text-sm font-medium">HTML de la investigación *</label>
             <p className="mb-2 text-xs leading-relaxed text-slate-500">
-              En Claude: Download / Copy del artefacto. Acá se pega o se sube el .html. No uses el
-              editor de notas: este contenido es una página interactiva.
+              El link de Claude o Gemini no trae los PDF ni el Excel. Bajá el artefacto completo
+              (HTML + carpeta de descargas y datos) y subí el .html acá, o pasale la carpeta al
+              asistente. No uses el editor de notas: esto es una página interactiva.
             </p>
             <label className="mb-3 inline-flex cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
               Subir archivo .html
@@ -467,7 +468,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
               placeholder="https://claude.ai/artifact/…"
             />
             <p className="mt-1 text-xs text-slate-500">
-              Queda como fuente. El visitante entra a la página de UCU.
+              Queda como fuente interna. Un visitante entra a la página de UCU, no al artefacto.
             </p>
           </div>
 
