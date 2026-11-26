@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { FileArchive, Loader2 } from 'lucide-react';
 import { InvestigacionRow } from '@/components/investigaciones/InvestigacionesIndex';
 import { slugify } from '@/lib/slug';
 import { INVESTIGACION_AI_OPTIONS } from '@/types/investigaciones';
@@ -52,6 +52,11 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [zipName, setZipName] = useState('');
+  const [zipFiles, setZipFiles] = useState<{ rel: string; label: string }[]>([]);
+  const [zipLoading, setZipLoading] = useState(false);
+  const [zipDrag, setZipDrag] = useState(false);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -123,6 +128,50 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
     setSuccess(`Se cargó ${file.name} (${Math.round(file.size / 1024)} KB). Revisá y publicá.`);
   }
 
+  async function handleZip(file: File | null) {
+    if (!file || zipLoading) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setError('El paquete tiene que ser un archivo .zip');
+      return;
+    }
+
+    setZipLoading(true);
+    setError('');
+    setSuccess('');
+
+    const form = new FormData();
+    form.append('zip', file);
+    if (slug.trim()) form.append('slug', slug.trim());
+
+    try {
+      const res = await fetch('/api/admin/investigaciones/paquete', {
+        method: 'POST',
+        credentials: 'include',
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo leer el zip');
+        return;
+      }
+      setHtml(data.html || '');
+      setSlug(data.slug || slug);
+      setSlugEdited(true);
+      if (!title.trim() && data.title) setTitle(data.title);
+      if (!excerpt.trim() && data.excerpt) setExcerpt(data.excerpt);
+      setZipName(file.name);
+      setZipFiles(Array.isArray(data.files) ? data.files : []);
+      setSuccess(
+        `Se cargaron ${data.fileCount} archivos del zip. Completá la ficha y publicá.`
+      );
+    } catch {
+      setError('Error de conexión al subir el zip');
+    } finally {
+      setZipLoading(false);
+      if (zipInputRef.current) zipInputRef.current.value = '';
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -130,7 +179,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
     setSuccess('');
 
     if (!html.trim()) {
-      setError('Pegá el HTML o subí el archivo .html de la investigación');
+      setError('Subí el zip completo o pegá el HTML de la investigación');
       setLoading(false);
       return;
     }
@@ -218,7 +267,7 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
             {mode === 'create' ? 'Nueva investigación' : 'Editar investigación'}
           </h1>
           <p className="mt-1 text-slate-500">
-            Pegá el HTML de Claude, Gemini u otra IA. Se publica en UCU, no como link externo.
+            La forma más segura es subir el zip completo. También se puede pegar solo el HTML.
           </p>
         </div>
         {mode === 'edit' && initialSlug ? (
@@ -250,6 +299,74 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
           {success ? (
             <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>
           ) : null}
+
+          <div>
+            <h2 className="font-semibold text-slate-900">Paquete de la investigación</h2>
+            <p className="mb-3 mt-1 text-sm leading-relaxed text-slate-600">
+              Subí el zip con el HTML, los datos y las descargas. Así no falta el PDF, el Excel ni
+              el JSON.
+            </p>
+            <label
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setZipDrag(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setZipDrag(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setZipDrag(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setZipDrag(false);
+                void handleZip(e.dataTransfer.files?.[0] ?? null);
+              }}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
+                zipDrag
+                  ? 'border-[#1a5fb4] bg-sky-50'
+                  : zipName
+                    ? 'border-emerald-300 bg-emerald-50'
+                    : 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100'
+              } ${zipLoading ? 'pointer-events-none opacity-70' : ''}`}
+            >
+              {zipLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-[#1a5fb4]" />
+              ) : (
+                <FileArchive className={`h-8 w-8 ${zipName ? 'text-emerald-700' : 'text-slate-500'}`} />
+              )}
+              <span className="mt-3 text-sm font-semibold text-slate-900">
+                {zipLoading
+                  ? 'Leyendo el zip y subiendo archivos…'
+                  : zipName
+                    ? zipName
+                    : 'Arrastrá el zip acá o elegilo'}
+              </span>
+              <span className="mt-1 text-xs text-slate-600">
+                {zipFiles.length
+                  ? `${zipFiles.length} archivos listos para publicar`
+                  : 'Por ejemplo Observatorio_Adelantos_UCU.zip'}
+              </span>
+              <input
+                ref={zipInputRef}
+                type="file"
+                accept=".zip,application/zip"
+                className="hidden"
+                onChange={(e) => void handleZip(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {zipFiles.length ? (
+              <ul className="mt-3 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                {zipFiles.map((file) => (
+                  <li key={file.rel} className="truncate py-0.5 font-mono">
+                    {file.label}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
 
           <div>
             <h2 className="font-semibold text-slate-900">Ficha del listado</h2>
@@ -292,7 +409,11 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
               }}
               className="w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-[#1a5fb4]"
             />
-            <p className="mt-1 text-xs text-slate-500">ucu.org.ar/investigaciones/{slug || '…'}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {zipFiles.length
+                ? `Los archivos del zip están en /inv/${slug || '…'}/. Si cambiás esta URL, volvé a subir el zip.`
+                : `ucu.org.ar/investigaciones/${slug || '…'}`}
+            </p>
           </div>
 
           <div className="relative">
@@ -390,14 +511,13 @@ export function InvestigacionEditor({ mode, initialSlug }: InvestigacionEditorPr
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">HTML de la investigación *</label>
+            <label className="mb-1 block text-sm font-medium">HTML</label>
             <p className="mb-2 text-xs leading-relaxed text-slate-500">
-              El link de Claude o Gemini no trae los PDF ni el Excel. Bajá el artefacto completo
-              (HTML + carpeta de descargas y datos) y subí el .html acá, o pasale la carpeta al
-              asistente. No uses el editor de notas: esto es una página interactiva.
+              Si no tenés zip, se puede pegar o subir solo el .html. Las descargas no viajan con el
+              HTML suelto.
             </p>
-            <label className="mb-3 inline-flex cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-              Subir archivo .html
+            <label className="mb-3 inline-flex cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Subir solo .html
               <input
                 type="file"
                 accept=".html,.htm,text/html"

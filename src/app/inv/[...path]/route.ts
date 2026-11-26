@@ -35,6 +35,9 @@ export async function GET(
     ext === '.webp' ||
     ext === '.json' ||
     ext === '.js' ||
+    ext === '.mjs' ||
+    ext === '.css' ||
+    ext === '.woff2' ||
     ext === '.html' ||
     ext === '.htm';
 

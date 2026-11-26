@@ -1,6 +1,12 @@
 import { getAdminStorage } from '@/lib/firebase-admin';
+import {
+  investigacionAssetContentType,
+  investigacionAssetStoragePath,
+  safeInvestigacionAssetRel,
+} from '@/lib/investigacion-assets';
 import { slugify } from '@/lib/slug';
 import type { InvestigacionDocument, InvestigacionStatus } from '@/types/investigaciones';
+import type { InvestigacionPackedFile } from '@/lib/investigacion-ingest';
 
 export const INVESTIGACIONES_COLLECTION = 'investigaciones';
 const FIRESTORE_HTML_LIMIT = 700_000;
@@ -102,6 +108,34 @@ export async function persistInvestigacionHtml(
   }
 
   return { html: '', htmlStoragePath: storagePath };
+}
+
+export async function persistInvestigacionAssets(
+  slug: string,
+  assets: { rel: string; buffer: Buffer }[]
+): Promise<InvestigacionPackedFile[]> {
+  const storage = getAdminStorage();
+  if (!storage) {
+    throw new Error('Storage no configurado. No se pueden guardar los archivos del zip.');
+  }
+
+  const bucket = storage.bucket();
+  const uploaded: InvestigacionPackedFile[] = [];
+
+  for (const asset of assets) {
+    const rel = safeInvestigacionAssetRel(asset.rel.split('/'));
+    if (!rel) continue;
+    await bucket.file(investigacionAssetStoragePath(`${slug}/${rel}`)).save(asset.buffer, {
+      resumable: asset.buffer.length > 5 * 1024 * 1024,
+      metadata: {
+        contentType: investigacionAssetContentType(rel),
+        cacheControl: 'private, max-age=3600',
+      },
+    });
+    uploaded.push({ rel, bytes: asset.buffer.length });
+  }
+
+  return uploaded;
 }
 
 export async function deleteInvestigacionHtmlFile(storagePath: string) {
