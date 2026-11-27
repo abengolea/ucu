@@ -255,27 +255,31 @@ function bindEvents() {
 
 async function init() {
   try {
-    const [claimsResponse, summaryResponse] = await Promise.all([
-      fetch('/inv/adelantos/data/claims.json'),
-      fetch('/inv/adelantos/data/summary.json'),
-    ]);
-    if (!claimsResponse.ok || !summaryResponse.ok) throw new Error('No se pudo cargar la base.');
-    const [claims, summary] = await Promise.all([claimsResponse.json(), summaryResponse.json()]);
-    state.summary = summary;
-    state.claims = claims.map((claim) => ({ ...claim, _search: buildSearchIndex(claim) }));
-    state.filtered = [...state.claims];
-    fillSelect(fields.year, summary.yearly.map((x) => x.anio).sort().reverse());
-    fillSelect(fields.category, state.claims.flatMap(allCategories));
-    fillSelect(fields.product, state.claims.map((x) => x.producto_servicio));
+    const summaryResponse = await fetch('/inv/adelantos/data/summary.json');
+    if (!summaryResponse.ok) throw new Error('No se pudo cargar el resumen.');
+    state.summary = await summaryResponse.json();
+    fillSelect(fields.year, state.summary.yearly.map((x) => x.anio).sort().reverse());
+    fillSelect(fields.category, state.summary.categories.map((x) => x.categoria));
+    fillSelect(fields.product, (state.summary.products || []).map((x) => x.producto_servicio));
     renderYearChart();
     renderCategoryChart();
     bindEvents();
+    requestAnimationFrame(() => $('#loadingScreen').classList.add('hidden'));
+    $('#claimsBody').innerHTML = '<tr><td colspan="6">Cargando los 7.573 reclamos del explorador…</td></tr>';
+    const claimsResponse = await fetch('/inv/adelantos/data/claims.json');
+    if (!claimsResponse.ok) throw new Error('No se pudo cargar el explorador.');
+    const claims = await claimsResponse.json();
+    state.claims = claims.map((claim) => ({ ...claim, _search: buildSearchIndex(claim) }));
+    state.filtered = [...state.claims];
     applyFilters(false);
   } catch (error) {
-    $('#loadingScreen').innerHTML = `<div class="loading-mark">!</div><p>${escapeHtml(error.message)}</p>`;
-    return;
+    const screen = $('#loadingScreen');
+    if (screen && !screen.classList.contains('hidden')) {
+      screen.innerHTML = `<div class="loading-mark">!</div><p>${escapeHtml(error.message)}</p>`;
+      return;
+    }
+    $('#claimsBody').innerHTML = `<tr><td colspan="6">${escapeHtml(error.message)}</td></tr>`;
   }
-  requestAnimationFrame(() => $('#loadingScreen').classList.add('hidden'));
 }
 
 init();

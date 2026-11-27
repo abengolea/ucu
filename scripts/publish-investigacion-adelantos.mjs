@@ -85,6 +85,60 @@ function cuitDigits(value) {
   return String(value ?? '').replace(/\D/g, '');
 }
 
+const INIT_OLD = `async function init() {
+  try {
+    const [claimsResponse, summaryResponse] = await Promise.all([
+      fetch('/inv/adelantos/data/claims.json'),
+      fetch('/inv/adelantos/data/summary.json'),
+    ]);
+    if (!claimsResponse.ok || !summaryResponse.ok) throw new Error('No se pudo cargar la base.');
+    const [claims, summary] = await Promise.all([claimsResponse.json(), summaryResponse.json()]);
+    state.summary = summary;
+    state.claims = claims.map((claim) => ({ ...claim, _search: buildSearchIndex(claim) }));
+    state.filtered = [...state.claims];
+    fillSelect(fields.year, summary.yearly.map((x) => x.anio).sort().reverse());
+    fillSelect(fields.category, state.claims.flatMap(allCategories));
+    fillSelect(fields.product, state.claims.map((x) => x.producto_servicio));
+    renderYearChart();
+    renderCategoryChart();
+    bindEvents();
+    applyFilters(false);
+  } catch (error) {
+    $('#loadingScreen').innerHTML = \`<div class="loading-mark">!</div><p>\${escapeHtml(error.message)}</p>\`;
+    return;
+  }
+  requestAnimationFrame(() => $('#loadingScreen').classList.add('hidden'));
+}`;
+
+const INIT_NEW = `async function init() {
+  try {
+    const summaryResponse = await fetch('/inv/adelantos/data/summary.json');
+    if (!summaryResponse.ok) throw new Error('No se pudo cargar el resumen.');
+    state.summary = await summaryResponse.json();
+    fillSelect(fields.year, state.summary.yearly.map((x) => x.anio).sort().reverse());
+    fillSelect(fields.category, state.summary.categories.map((x) => x.categoria));
+    fillSelect(fields.product, (state.summary.products || []).map((x) => x.producto_servicio));
+    renderYearChart();
+    renderCategoryChart();
+    bindEvents();
+    requestAnimationFrame(() => $('#loadingScreen').classList.add('hidden'));
+    $('#claimsBody').innerHTML = '<tr><td colspan="6">Cargando los 7.573 reclamos del explorador…</td></tr>';
+    const claimsResponse = await fetch('/inv/adelantos/data/claims.json');
+    if (!claimsResponse.ok) throw new Error('No se pudo cargar el explorador.');
+    const claims = await claimsResponse.json();
+    state.claims = claims.map((claim) => ({ ...claim, _search: buildSearchIndex(claim) }));
+    state.filtered = [...state.claims];
+    applyFilters(false);
+  } catch (error) {
+    const screen = $('#loadingScreen');
+    if (screen && !screen.classList.contains('hidden')) {
+      screen.innerHTML = \`<div class="loading-mark">!</div><p>\${escapeHtml(error.message)}</p>\`;
+      return;
+    }
+    $('#claimsBody').innerHTML = \`<tr><td colspan="6">\${escapeHtml(error.message)}</td></tr>\`;
+  }
+}`;
+
 function patchHtml(html) {
   let out = html.replace('lang="es"', 'lang="es-AR"');
   out = out.replace(
@@ -116,6 +170,30 @@ function patchHtml(html) {
     'Fecha de corte de datos: <strong>25 de noviembre de 2026</strong>. El sitio no se actualiza automáticamente.',
     'Observatorio UCU · Fuente: tuquejasuma.com/adelantoscom. Corte de datos: 25/11/2026. El sitio no se actualiza solo.'
   );
+  out = out.replace(
+    'Cargando la base completa de 7.573 reclamos…',
+    'Cargando el observatorio…'
+  );
+  out = out.replace(
+    '<svg viewBox="0 0 160 160" role="img" aria-label="Cobertura cien por ciento">',
+    '<svg viewBox="0 0 160 160" width="220" height="220" role="img" aria-label="Cobertura cien por ciento">'
+  );
+  out = out.replace(
+    '<circle cx="80" cy="80" r="67" class="ring-bg"></circle>',
+    '<circle cx="80" cy="80" r="67" class="ring-bg" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="9"></circle>'
+  );
+  out = out.replace(
+    '<circle cx="80" cy="80" r="67" class="ring-value"></circle>',
+    '<circle cx="80" cy="80" r="67" class="ring-value" fill="none" stroke="#e6007e" stroke-width="9" stroke-dasharray="421" stroke-linecap="round"></circle>'
+  );
+  if (!out.includes('fonts.googleapis.com')) {
+    out = out.replace(
+      '<title>Observatorio Adelantos.com | UCU</title>',
+      `<title>Observatorio Adelantos.com | UCU</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">`
+    );
+  }
   return out;
 }
 
@@ -136,6 +214,19 @@ function patchCss(css) {
   return out;
 }
 
+function inlineCssAndJs(dir) {
+  const htmlPath = path.join(dir, 'index.html');
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  let css = fs.readFileSync(path.join(dir, 'styles.css'), 'utf8');
+  const js = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
+  css = css
+    .replaceAll('url("assets/', 'url("/inv/adelantos/assets/')
+    .replaceAll("url('assets/", "url('/inv/adelantos/assets/");
+  html = html.replace(/<link rel="stylesheet" href="[^"]*styles\.css">/, () => `<style>\n${css}\n</style>`);
+  html = html.replace(/<script src="[^"]*app\.js"[^>]*><\/script>/, () => `<script>\n${js}\n</script>`);
+  fs.writeFileSync(htmlPath, html, 'utf8');
+}
+
 function stageFiles() {
   if (!fs.existsSync(path.join(SOURCE_DIR, 'index.html'))) {
     throw new Error(`No está el HTML de origen en ${SOURCE_DIR}`);
@@ -154,11 +245,14 @@ function stageFiles() {
   fs.writeFileSync(cssPath, patchCss(fs.readFileSync(cssPath, 'utf8')), 'utf8');
 
   const jsPath = path.join(STAGE_DIR, 'app.js');
-  const js = fs
+  let js = fs
     .readFileSync(jsPath, 'utf8')
     .replaceAll("fetch('data/claims.json')", "fetch('/inv/adelantos/data/claims.json')")
     .replaceAll("fetch('data/summary.json')", "fetch('/inv/adelantos/data/summary.json')");
+  if (js.includes(INIT_OLD)) js = js.replace(INIT_OLD, INIT_NEW);
   fs.writeFileSync(jsPath, js, 'utf8');
+
+  inlineCssAndJs(STAGE_DIR);
 
   const whiteLogo = path.join(rootDir, 'public', 'inv', 'fenanjor', 'logo-ucu-white.png');
   const literata = path.join(rootDir, 'public', 'inv', 'fenanjor', 'fonts', 'literata-latin-wght.woff2');
